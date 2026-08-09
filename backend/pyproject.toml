@@ -1,0 +1,71 @@
+[project]
+name = "personal-finance"
+version = "0.1.0"
+description = "Private household finance service"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "alembic>=1.16.5,<2",
+    "argon2-cffi>=25.1.0,<26",
+    "fastapi>=0.116.1,<1",
+    "pydantic-settings>=2.10.1,<3",
+    "sqlalchemy>=2.0.43,<3",
+    "tzdata>=2025.2",
+    "uvicorn>=0.35.0,<1",
+]
+
+[project.scripts]
+personal-finance = "app.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+artifacts = ["app/static/**"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"alembic.ini" = "app/alembic.ini"
+"alembic" = "app/_migrations"
+
+[dependency-groups]
+dev = [
+    "cryptography>=48.0.1,<49",
+    "httpx2>=2.7.0,<3",
+    "hypothesis>=6.138.15,<7",
+    "pytest>=9.0.3,<10",
+    "pytest-cov>=6.2.1,<7",
+    "ruff>=0.12.10,<1",
+    "ty>=0.0.1a19",
+]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers --cov=app --cov-report=term-missing"
+filterwarnings = [
+    "error::ResourceWarning",
+    "error::pytest.PytestUnraisableExceptionWarning",
+    "error::starlette.exceptions.StarletteDeprecationWarning",
+]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"alembic/versions/*.py" = ["E501"]
+
+[tool.ty.environment]
+python-version = "3.13"

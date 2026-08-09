@@ -1,0 +1,43 @@
+{
+  "name": "personal-finance-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "api:generate": "cd ../backend && uv run python -c \"import json,pathlib; from app.main import create_app; app=create_app(readiness_probe=lambda: True,identity_service=object(),session_manager=object(),allowed_origin='https://finance.test'); pathlib.Path('../frontend/openapi.json').write_text(json.dumps(app.openapi(),indent=2,ensure_ascii=False)+'\\n',encoding='utf-8')\" && cd ../frontend && node scripts/generate-api-schema.mjs",
+    "api:check": "cd ../backend && uv run python -c \"import json,pathlib; from app.main import create_app; expected=create_app(readiness_probe=lambda: True,identity_service=object(),session_manager=object(),allowed_origin='https://finance.test').openapi(); actual=json.loads(pathlib.Path('../frontend/openapi.json').read_text(encoding='utf-8')); raise SystemExit(0 if actual==expected else 1)\" && cd ../frontend && node scripts/generate-api-schema.mjs --check",
+    "audit:ci": "node scripts/npm-audit-gate.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "biome lint src e2e scripts vite.config.ts playwright.config.ts",
+    "test": "vitest --passWithNoTests",
+    "test:coverage": "vitest run --coverage --coverage.include=src/**/*.{ts,tsx} --coverage.exclude=src/**/*.test.{ts,tsx} --coverage.exclude=src/test/** --coverage.exclude=src/main.tsx --coverage.exclude=src/api/schema.d.ts --coverage.thresholds.statements=80 --coverage.thresholds.branches=70",
+    "typecheck": "tsc --noEmit",
+    "e2e": "npm run build && node e2e/support/run-e2e.mjs",
+    "e2e:harness": "npm run build && node e2e/support/run-e2e.mjs e2e/harness.spec.ts"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "7.18.2",
+    "vite": "^7.1.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.2",
+    "@playwright/test": "^1.55.0",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.11",
+    "@types/react-dom": "^19.1.7",
+    "@vitest/coverage-v8": "^4.1.10",
+    "axe-core": "^4.10.3",
+    "jsdom": "^26.1.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10"
+  }
+}

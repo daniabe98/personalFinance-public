@@ -1,0 +1,26 @@
+[Unit]
+Description=Personal Finance domestic HTTPS service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=personal-finance
+Group=personal-finance
+EnvironmentFile=/etc/personal-finance/personal-finance.env
+WorkingDirectory=/var/lib/personal-finance
+ExecStartPre=/opt/personal-finance/bin/personal-finance migrate
+ExecStartPre=/opt/personal-finance/bin/personal-finance backup --if-due
+ExecStart=/opt/personal-finance/bin/uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8443 --ssl-certfile ${PF_TLS_CERT} --ssl-keyfile ${PF_TLS_KEY}
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/personal-finance /var/backups/personal-finance
+
+[Install]
+WantedBy=multi-user.target

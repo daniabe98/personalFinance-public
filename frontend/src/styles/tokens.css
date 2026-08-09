@@ -1,0 +1,28 @@
+:root {
+  color-scheme: light;
+  --color-background: #f5f1e8;
+  --color-background-blue-wash: #dce8f2;
+  --color-surface-solid: #fbf9f4;
+  --color-glass: rgba(251, 249, 244, 0.72);
+  --color-glass-strong: rgba(251, 249, 244, 0.9);
+  --color-glass-border: rgba(255, 255, 255, 0.78);
+  --color-text: #102538;
+  --color-text-muted: #4b6072;
+  --color-primary: #154889;
+  --color-primary-hover: #103a70;
+  --color-primary-soft: #d7e4f0;
+  --color-border: #b9c7d1;
+  --color-success: #236746;
+  --color-warning: #8a5a13;
+  --color-danger: #983b36;
+  --shadow-glass: 0 18px 48px rgba(21, 72, 137, 0.14);
+  --radius-plane: 14px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+  --font-body: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
+  --font-display: "Newsreader", Georgia, serif;
+}

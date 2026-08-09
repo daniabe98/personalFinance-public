@@ -1,0 +1,15 @@
+schemaVersion: '2.0'
+updatedAt: '2026-07-23T18:28:02Z'
+corrections:
+  - pattern: "Mantener el rigor contable interno sin trasladar jerga técnica a la experiencia de usuario"
+    trigger: "Al definir vocabulario, identidad o interfaces para el producto"
+    action: "Separar terminología contable interna precisa de un lenguaje cotidiano y accesible para el usuario"
+    relatedSkill: "ai-constitution"
+    diagnostic: "El operador corrigió una propuesta de vocabulario demasiado centrada en términos de dominio"
+    skillIssue: "La propuesta inicial no explicitaba suficientemente la accesibilidad del lenguaje orientado al usuario"
+    confidence: 0.3
+    evidenceCount: 1
+    domain: "project"
+    lastSeen: "2026-07-23T18:28:02Z"
+recoveries: []
+workflows: []
