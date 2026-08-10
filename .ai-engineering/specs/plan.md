@@ -1,6 +1,6 @@
 ---
 total: 108
-completed: 107
+completed: 108
 spec: spec-001
 title: Primera versión de Personal Finance
 status: approved
@@ -846,7 +846,7 @@ evidence. Nine Windows RED/GREEN tasks and the four closing tasks are open:
 - Patch (synthesis): Install the built wheel into a temporary Windows venv, migrate/bootstrap synthetic data, launch the wrapper on loopback HTTP with `http_lan`, prove login/session/unauthenticated denial and tear down all processes and temporaries.
 - Gate: `cd backend && uv run pytest tests/deployment/test_windows_http_smoke.py`
 
-- [ ] T-10.32 — GREEN: add the protected Windows deployment CI gate.
+- [x] T-10.32 — GREEN: add the protected Windows deployment CI gate.
 - Agent: build
 - Files: `.github/workflows/quality.yml:1`
 - Principles applied: §10.4 DRY, §10.6 SDD
