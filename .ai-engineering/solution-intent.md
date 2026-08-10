@@ -8,8 +8,8 @@
 | Campo | Valor |
 |---|---|
 | Producto | Personal Finance |
-| Estado | `spec-001` en implementación, aceptación HITL confirmada |
-| Versión | 0.1.0, pendiente de integración |
+| Estado | `spec-001` entregada y consolidada |
+| Versión | 0.1.0 integrada en `main` |
 | Uso | Privado, doméstico y limitado a una LAN de confianza |
 | Host y clientes | Windows 10/11 x64 |
 | Modelo inicial | Una persona y un espacio financiero |
@@ -181,14 +181,15 @@ IP, hostname, rutas, credenciales ni contenido financiero.
 
 | Spec/capacidad | Estado |
 |---|---|
-| `spec-001` núcleo financiero y operación Windows | `in_progress`, HITL confirmado |
+| `spec-001` núcleo financiero y operación Windows | `SHIPPED`, HITL confirmado |
 | Pasivos y periodicidad | Backlog |
 | Presupuesto y previsión | Backlog |
 | Varios usuarios y espacios compartidos | Backlog |
 | Copia externa y recuperación ante pérdida física | Backlog |
 
-`spec-001` no se declara `SHIPPED` hasta que el PR esté fusionado, todos los
-checks —incluido `windows-deployment`— estén verdes y la spec quede consolidada.
+`spec-001` se declaró `SHIPPED` después del squash merge del PR #2 con todos los
+checks —incluido `windows-deployment`— en verde y quedó archivada en el ledger
+de especificaciones.
 
 | Riesgo | Severidad | Tratamiento |
 |---|---|---|
