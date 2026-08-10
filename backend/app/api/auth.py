@@ -10,11 +10,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from app.api.dependencies import (
-    SESSION_COOKIE_NAME,
     _session_manager,
     require_authenticated_principal,
     require_same_origin,
     require_unsafe_request_protection,
+    session_cookie_name,
+    session_cookie_secure,
 )
 from app.identity.application.service import (
     AuthenticatedPrincipal,
@@ -70,9 +71,9 @@ def login(payload: LoginRequest, request: Request) -> JSONResponse:
         }
     )
     response.set_cookie(
-        key=SESSION_COOKIE_NAME,
+        key=session_cookie_name(request),
         value=grant.session_token,
-        secure=True,
+        secure=session_cookie_secure(request),
         httponly=True,
         samesite="strict",
         path="/",
@@ -89,7 +90,8 @@ def logout(
     ],
 ) -> Response:
     """Revoke the current session and expire its exact host cookie."""
-    session_token = request.cookies[SESSION_COOKIE_NAME]
+    cookie_name = session_cookie_name(request)
+    session_token = request.cookies[cookie_name]
     _identity_service(request).logout(
         session_token=session_token,
         principal_user_id=principal.user_id,
@@ -98,9 +100,9 @@ def logout(
     )
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     response.delete_cookie(
-        key=SESSION_COOKIE_NAME,
+        key=cookie_name,
         path="/",
-        secure=True,
+        secure=session_cookie_secure(request),
         httponly=True,
         samesite="strict",
     )
@@ -117,7 +119,7 @@ def current_session(
 ) -> dict[str, str]:
     """Return the principal and its stable CSRF token."""
     csrf_token = _session_manager(request).csrf_for_session(
-        request.cookies.get(SESSION_COOKIE_NAME, "")
+        request.cookies.get(session_cookie_name(request), "")
     )
     if csrf_token is None:
         raise HTTPException(

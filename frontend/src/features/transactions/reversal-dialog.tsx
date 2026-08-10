@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ErrorMessage } from "../../ui/feedback";
 import { localCalendarDate } from "../../lib/local-date";
+import { createIdempotencyKey } from "../../lib/idempotency-key";
 import type { TransactionsApi } from "./api";
 
 export function ReversalDialog({
@@ -19,7 +20,7 @@ export function ReversalDialog({
   const today = localCalendarDate();
   const [economicDate, setEconomicDate] = useState(today);
   const [cashDate, setCashDate] = useState(today);
-  const [key] = useState(() => crypto.randomUUID());
+  const [key] = useState(createIdempotencyKey);
   const [error, setError] = useState(false);
   useEffect(() => {
     const element = dialog.current;

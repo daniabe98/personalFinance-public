@@ -112,9 +112,14 @@ def _recovery_dependencies():
     from app.audit.adapters.repository import SqlAlchemyAuditRepository
     from app.audit.application.service import DurableAuditService
     from app.shared.config import get_settings
-    from app.shared.database import create_engine, create_session_factory
+    from app.shared.database import (
+        create_engine,
+        create_session_factory,
+        register_orm_models,
+    )
     from app.shared.unit_of_work import UnitOfWorkFactory
 
+    register_orm_models()
     settings = get_settings()
     database_name = make_url(settings.database_url).database
     if database_name is None or database_name == ":memory:":

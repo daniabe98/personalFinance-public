@@ -23,15 +23,27 @@ def test_required_data_and_security_settings_fail_loud(monkeypatch: pytest.Monke
 
 def test_settings_have_safe_typed_defaults() -> None:
     settings = Settings(
-        database_url="sqlite:///var/lib/personal-finance/finance.db",
+        database_url="sqlite:///C:/ProgramData/PersonalFinance/data/personal-finance.db",
         secret_key="a" * 32,
     )
 
     assert settings.database_url.startswith("sqlite:///")
     assert settings.busy_timeout_ms == 5_000
     assert settings.backup_retention == 7
-    assert settings.backup_directory == Path("/var/backups/personal-finance")
+    assert settings.backup_directory == Path(r"C:\ProgramData\PersonalFinance\backups")
     assert settings.domestic_timezone == "Europe/Madrid"
+    assert settings.transport_mode == "https"
+
+
+def test_transport_mode_rejects_unknown_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PF_DATABASE_URL", "sqlite:///finance.db")
+    monkeypatch.setenv("PF_SECRET_KEY", "a" * 32)
+    monkeypatch.setenv("PF_TRANSPORT_MODE", "plain_http")
+
+    with pytest.raises(ValidationError) as error:
+        Settings()
+
+    assert "transport_mode" in str(error.value)
 
 
 def test_backup_directory_can_be_configured_from_the_single_environment_setting(

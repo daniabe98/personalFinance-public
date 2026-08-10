@@ -212,6 +212,12 @@ def create_app(
     app.state.identity_service = identity_service or composed.get("identity_service")
     app.state.session_manager = session_manager or composed.get("session_manager")
     app.state.allowed_origin = allowed_origin
+    transport_mode = resolved_settings.transport_mode if resolved_settings is not None else "https"
+    app.state.transport_mode = transport_mode
+    app.state.session_cookie_name = (
+        "pf_session" if transport_mode == "http_lan" else "__Host-pf_session"
+    )
+    app.state.session_cookie_secure = transport_mode == "https"
     app.state.catalog_service = catalog_service or composed.get("catalog_service")
     app.state.financial_command_service = financial_command_service or composed.get(
         "financial_command_service"

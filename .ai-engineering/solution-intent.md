@@ -1,347 +1,200 @@
 # Solution Intent — Personal Finance
 
 > Status: Evolving
-> Last Review: 2026-07-23
+> Last Review: 2026-08-10
 
-## 1. Introducción
-
-### 1.1 Identidad
+## 1. Identidad y objetivo
 
 | Campo | Valor |
 |---|---|
 | Producto | Personal Finance |
-| Estado | Greenfield |
-| Versión del producto | TBD — pendiente de primera entrega |
-| Uso | Privado, doméstico y limitado a la red local |
-| Modelo operativo inicial | Una persona y un espacio financiero |
-| Licencia | TBD — pendiente de definición |
+| Estado | `spec-001` en implementación, aceptación HITL confirmada |
+| Versión | 0.1.0, pendiente de integración |
+| Uso | Privado, doméstico y limitado a una LAN de confianza |
+| Host y clientes | Windows 10/11 x64 |
+| Modelo inicial | Una persona y un espacio financiero |
 
-### 1.2 Objetivo y problema
+Personal Finance registra y explica las finanzas del hogar con un libro
+contable interno equilibrado y lenguaje cotidiano. La persona usuaria trabaja
+con saldo inicial, ingresos, gastos y transferencias sin editar débitos o
+créditos directamente.
 
-Personal Finance permitirá registrar, consultar y comprender las finanzas del
-hogar con rigor contable interno y lenguaje accesible. El producto debe reunir
-saldo, actividad económica y movimientos reales de dinero sin obligar al
-usuario a conocer terminología contable.
+La primera entrega incluye borradores, contabilización, reversión,
+conciliación, informes básicos, autenticación local, auditoría, backup diario y
+restauración aislada. Tarjetas, préstamos, presupuestos, previsiones,
+subcategorías, multimoneda y colaboración avanzada quedan fuera de `spec-001`.
 
-### 1.3 Resultados deseados
+## 2. Resultados y requisitos
 
-| Resultado | Evidencia esperada |
+| Resultado | Evidencia |
 |---|---|
-| Libro íntegro | Toda operación contabilizada está equilibrada |
-| Datos comprensibles | La interfaz usa acciones y términos cotidianos |
-| Historial trazable | Las correcciones conservan la operación original |
-| Operación doméstica segura | Acceso de red cifrado y autenticado |
-| Datos recuperables | Existe una copia válida y una restauración probada |
-
-### 1.4 Alcance
-
-La primera entrega cubre el núcleo financiero vertical definido en `spec-001`.
-Tarjetas, préstamos, devengos, reservas, presupuestos, previsiones y espacios
-compartidos avanzarán mediante especificaciones posteriores.
-
-### 1.5 Partes interesadas
-
-| Persona | Necesidad | Coste de un fallo |
-|---|---|---|
-| Persona operadora | Registrar y comprender sus finanzas | Datos incorrectos o perdidos |
-| Miembro del hogar | Consultar y usar el espacio autorizado | Acceso indebido o información confusa |
-| Responsable del servidor | Instalar, actualizar y recuperar | Indisponibilidad o restauración fallida |
-
-## 2. Requisitos de la solución
-
-### 2.1 Arquitectura funcional
+| Libro íntegro | Toda operación contabilizada queda equilibrada y es inmutable |
+| Precisión monetaria | EUR en céntimos enteros; nunca `float` |
+| Historial trazable | La reversión conserva la operación original |
+| Experiencia comprensible | Acciones financieras y mensajes cotidianos y accesibles |
+| Acceso doméstico | Sesión local desde clientes Windows de la LAN |
+| Datos recuperables | Backup diario verificado y restore aislado con integridad `ok` |
 
 ```mermaid
 flowchart TB
-    U["Usuario del hogar"] --> UI["Interfaz accesible"]
-    UI --> CMD["Comandos financieros"]
-    CMD --> LEDGER["Libro contable equilibrado"]
-    LEDGER --> VIEWS["Vistas económica y de tesorería"]
-    LEDGER --> RECON["Conciliación y reversión"]
-    LEDGER --> DB["Datos persistentes"]
-    DB --> BACKUP["Backup y restauración"]
+    U["Persona del hogar"] --> UI["SPA accesible"]
+    UI --> API["Comandos y consultas"]
+    API --> L["Libro equilibrado"]
+    L --> V["Saldos e informes"]
+    L --> R["Reversión y conciliación"]
+    L --> DB["SQLite"]
+    DB --> B["Backup y restore"]
 ```
-
-### 2.2 Requisitos por dominio
 
 | Dominio | Primera entrega | Evolución prevista |
 |---|---|---|
-| Identidad | Usuario local y espacio financiero personal | Varios usuarios y espacios compartidos |
-| Clasificación | Categorías planas y personalizables | Subcategorías |
-| Libro | Saldo inicial, ingreso, gasto y transferencia | Operaciones financieras avanzadas |
-| Control | Borrador, contabilización, reversión y conciliación | Planificación y operaciones pendientes |
-| Informes | Saldos, patrimonio, devengo y tesorería básicos | Presupuesto, previsión y calidad de datos |
-| Operación | HTTPS en LAN, backup local y restauración | Copias externas y recuperación ampliada |
+| Identidad | Usuario local y espacio personal | Varios usuarios y espacios |
+| Clasificación | Categorías planas personalizables | Subcategorías |
+| Libro | Saldo inicial, ingreso, gasto y transferencia | Pasivos y periodicidad |
+| Control | Borrador, contabilización, reversión y conciliación | Planificación |
+| Informes | Saldos, patrimonio, devengo y tesorería | Presupuesto y previsión |
+| Recuperación | Backup local diario y restore aislado | Copia externa |
 
-### 2.3 Requisitos no funcionales
-
-| Categoría | Requisito | Umbral o evidencia |
-|---|---|---|
-| Integridad | Débitos y créditos coinciden exactamente | Obligatorio antes de contabilizar |
-| Precisión | Importes enteros en céntimos EUR | Ningún importe monetario usa `float` |
-| Atomicidad | Operación y apuntes se confirman juntos | Todo o nada |
-| Seguridad | Sesión cifrada desde otros dispositivos | HTTPS obligatorio en LAN |
-| Recuperación | Copia diaria verificable | Restauración real antes de aceptar la entrega |
-| Calidad | Cobertura automatizada | Mínimo configurado por `ai-eng`: 80 % |
-
-### 2.4 Integraciones
+## 3. Arquitectura técnica
 
 ```mermaid
 flowchart LR
-    B["Navegador doméstico"] -->|HTTPS| APP["Personal Finance"]
-    APP -->|Archivo local| SQLITE["SQLite"]
-    APP -->|Copia consistente| STORE["Directorio de backups"]
-    OS["Linux / systemd"] -->|Ciclo de vida| APP
+    W["Navegador Windows"] -->|"HTTP RFC1918 :8080"| APP["FastAPI + React SPA"]
+    APP --> DOM["Dominio financiero"]
+    DOM --> SQL["SQLAlchemy + SQLite"]
+    SQL --> BK["Backups verificados"]
+    TASK["Task Scheduler"] --> APP
+    FW["Firewall Private + LocalSubnet"] --> APP
 ```
 
-| Integración | Contrato inicial | Estado |
-|---|---|---|
-| Navegador | SPA y API bajo un mismo origen | Planificada |
-| SQLite | Un archivo de datos no expuesto a la red | Planificada |
-| Linux | Arranque y reinicio del servicio | Planificada |
-| Backup local | Retención configurable y restauración manual | Planificada |
-
-## 3. Diseño técnico
-
-### 3.1 Stack y límites
-
-```mermaid
-flowchart LR
-    TS["Interfaz TypeScript"] --> API["Backend Python"]
-    API --> DOMAIN["Dominio financiero"]
-    DOMAIN --> DATA["Persistencia SQLite"]
-```
-
-| Capa | Restricción vigente |
+| Capa | Decisión vigente |
 |---|---|
-| Interfaz | TypeScript; framework a decidir en `/ai-plan` |
-| Backend | Python; framework a decidir en `/ai-plan` |
-| Persistencia | SQLite; acceso y migraciones a decidir en `/ai-plan` |
-| Gráficos | TBD — fuera del núcleo inicial si no son necesarios |
-| Despliegue | Un servicio doméstico; mecanismo a decidir en `/ai-plan` |
+| Interfaz | React, TypeScript, Vite y componentes accesibles |
+| API | FastAPI bajo `/api/v1` y mismo origen que la SPA |
+| Dominio | Monolito modular con comandos financieros e invariantes |
+| Persistencia | SQLite, SQLAlchemy y migraciones Alembic |
+| Distribución | SPA dentro de un único wheel Python |
+| Despliegue | PowerShell y Programador de tareas de Windows |
 
-El producto mantiene un monolito modular y un único servicio. Docker,
-microservicios y PostgreSQL permanecen fuera del alcance hasta que exista una
-necesidad demostrada.
+Un único proceso de Uvicorn sirve interfaz y API. SQLite no abre un puerto de
+red. Los comandos de negocio coordinan operación, apuntes, auditoría e
+idempotencia en una transacción. La interfaz no puede crear apuntes arbitrarios.
 
-### 3.2 Entornos
+### 3.1 Entornos
 
-| Entorno | Propósito | Red | Datos |
+| Entorno | Red | Datos | Transporte |
 |---|---|---|---|
-| Desarrollo | Construcción y pruebas | Localhost | Datos sintéticos |
-| Pruebas | Validación automatizada | Aislada | Fixtures |
-| Doméstico | Uso real | LAN mediante HTTPS | Directorio persistente protegido |
+| Desarrollo | Loopback | Sintéticos | HTTP o HTTPS de prueba |
+| Pruebas | Aislada | Temporales/fixtures | HTTPS interno y HTTP-LAN aislado |
+| Doméstico | LAN privada RFC1918 | `%ProgramData%\PersonalFinance` | HTTP-LAN explícito |
 
-### 3.3 Políticas de API
+### 3.2 Distribución Windows
 
-| Superficie | Política |
+- `%ProgramFiles%\PersonalFinance` contiene scripts, Python 3.13 administrado
+  por `uv`, entorno virtual y wheel.
+- `%ProgramData%\PersonalFinance` contiene configuración, SQLite, backups y
+  logs con ACL para Administradores, SYSTEM y `LOCAL SERVICE`.
+- `PersonalFinance-App` se inicia al arrancar, migra, recupera el backup
+  pendiente y sirve en `0.0.0.0:8080`, con reintentos tras fallo.
+- `PersonalFinance-Backup` se ejecuta diariamente y recupera ejecuciones
+  perdidas.
+- Windows Firewall admite TCP 8080 únicamente en perfil Privado y desde
+  `LocalSubnet`.
+- El desinstalador retira runtime, tareas y firewall, pero conserva siempre
+  datos y backups.
+
+## 4. Seguridad
+
+El modo doméstico requiere `PF_TRANSPORT_MODE=http_lan` y
+`PF_ALLOWED_ORIGIN=http://<IPv4-RFC1918>:8080`. Rechaza HTTP no privado y no
+tolera coincidencias parciales de origen. La cookie `pf_session` es `HttpOnly`,
+`SameSite=Strict` y `Secure=false`; los comandos mantienen Origin exacto y CSRF.
+
+HTTP no cifra credenciales ni datos frente a un observador de red. El servicio
+solo puede utilizarse en una LAN doméstica de confianza, nunca debe publicarse
+en Internet y la instalación exige una IPv4 privada estable. Este riesgo alto
+está registrado mediante D-001-12, aceptado hasta su revisión el 2027-08-09 y
+sin renovación automática.
+
+El modo HTTPS se conserva para pruebas internas. Usa `__Host-pf_session`,
+`Secure=true`, `HttpOnly`, `SameSite=Strict`, Origin exacto y CSRF. La entrega
+doméstica no crea ni distribuye certificados.
+
+| Control | Evidencia |
 |---|---|
-| Operaciones financieras | Comandos de negocio; no apuntes arbitrarios |
-| Consultas | Vistas derivadas del libro |
-| Autenticación | Sesión local con cookie segura y no accesible a JavaScript |
-| Versionado | TBD — se definirá antes de exponer contratos estables |
-| Límites de uso | TBD — no hay exposición pública |
+| Autenticación y autorización | Tests API/E2E y API sin sesión devuelve 401 |
+| Cookies y CSRF | Tests unitarios para ambos modos de transporte |
+| Secretos | JSON protegido, variables de proceso, Gitleaks |
+| Código inseguro | Semgrep y revisión regulada |
+| Dependencias | Lockfiles y auditorías Python/Node |
+| Exposición de red | Diagnóstico de firewall Private+LocalSubnet |
+| Privilegios | Tareas `LOCAL SERVICE` y ACL por SID |
 
-### 3.4 Publicación y despliegue
+## 5. Recuperación y observabilidad
 
-```mermaid
-flowchart LR
-    DEV["Cambio aprobado"] --> GATE["Gates y pruebas"]
-    GATE --> PR["Pull request"]
-    PR --> BUILD["Build SPA + backend"]
-    BUILD --> DEPLOY["Servidor doméstico"]
-    DEPLOY --> CHECK["Health check y restauración verificable"]
-```
+La copia diaria usa la API consistente de SQLite y solo se cataloga después de
+`PRAGMA integrity_check = ok`. Una reclamación durable por fecha evita duplicar
+éxitos; la retención solo elimina copias previamente verificadas. Un fallo nuevo
+no invalida la última copia válida.
 
-| Artefacto | Destino | Regla |
+Restore solo existe en el CLI local. Exige una fuente catalogada y un destino
+nuevo distinto de la base activa, restaura a un temporal, comprueba integridad,
+ejecuta Alembic, vuelve a comprobar y publica atómicamente. Promover una copia
+a producción requiere otro procedimiento y autorización explícita.
+
+| Señal | Ubicación/evidencia | Atención |
 |---|---|---|
-| Código | Directorio de aplicación | Sin escritura de datos financieros |
-| Datos | Directorio persistente | Escritura limitada al usuario del servicio |
-| Backup | Directorio separado | Copia consistente y retención configurable |
+| Servicio | Tareas y log bajo ProgramData | Tarea deshabilitada o reinicios repetidos |
+| Readiness | `/health/ready` | Estado distinto de 200 |
+| Integridad | Invariantes y comprobación SQLite | Cualquier fallo |
+| Backup | Estado reducido y `backup.log` | Último intento fallido |
+| Restauración | CLI y auditoría saneada | Destino no publicado o integridad fallida |
+| Seguridad | Eventos sin secretos ni finanzas | Accesos rechazados anómalos |
 
-## 4. Observabilidad
+Los runbooks comprobados cubren instalación, diagnóstico, reinicio, backup,
+restauración aislada y desinstalación segura.
 
-### 4.1 Señales
+## 6. Calidad y entrega
 
-```mermaid
-mindmap
-  root((Operación))
-    Aplicación
-      Arranque
-      Errores
-      Salud
-    Datos
-      Integridad
-      Backup
-      Restauración
-    Seguridad
-      Inicio de sesión
-      Cierre de sesión
-      Intentos fallidos
-    Finanzas
-      Contabilización
-      Reversión
-      Conciliación
-```
-
-### 4.2 SLI, alertas y registros
-
-| Señal | Evidencia | Condición de atención |
-|---|---|---|
-| Servicio | Estado y logs de systemd | Reinicios repetidos o servicio caído |
-| Integridad | Validación contable | Cualquier desequilibrio |
-| Backup | Resultado de copia y verificación | Una ejecución fallida |
-| Restauración | Resultado de prueba | Archivo no recuperable |
-| Seguridad | Eventos de sesión | Patrón anómalo o acceso rechazado repetido |
-
-Los logs no incluirán contraseñas, tokens de sesión ni contenido financiero
-innecesario. La retención detallada queda TBD hasta definir el entorno doméstico.
-
-### 4.3 Runbooks
-
-| Runbook | Estado |
+| Nivel | Cobertura actual |
 |---|---|
-| Arranque y diagnóstico del servicio | Pendiente |
-| Backup y restauración | Obligatorio para `spec-001` |
-| Actualización y migración | Pendiente |
-| Recuperación ante corrupción | Pendiente |
+| Dominio | Invariantes, transiciones, idempotencia y reversión |
+| Persistencia | Atomicidad, migraciones, backup y restauración |
+| API | Autenticación, autorización, comandos y consultas |
+| Interfaz | Flujos financieros, accesibilidad y fallback UUID en HTTP |
+| Extremo a extremo | Wheel empaquetado por HTTPS interno y HTTP-LAN Windows |
+| Operación | Scripts PowerShell, ACL, tareas, firewall y diagnóstico |
 
-## 5. Seguridad
+Los gates exigen al menos 80 % de cobertura backend, lint y tipos en Python y
+TypeScript, build de producción, E2E, auditorías de dependencias, Gitleaks,
+Semgrep y gobierno `ai-eng`. `windows-deployment` se ejecuta en
+`windows-latest`, construye el wheel, valida PowerShell y levanta el artefacto
+por HTTP en un entorno aislado.
 
-### 5.1 Acceso
+La aceptación HITL del 2026-08-10 confirmó desde un segundo ordenador Windows:
+flujos financieros, borradores, anulación, conciliación, informes, 401 sin
+sesión, arranque automático, persistencia tras reinicio, diagnóstico, backup y
+restore aislado con `PRAGMA integrity_check = ok`. La evidencia se conserva sin
+IP, hostname, rutas, credenciales ni contenido financiero.
 
-```mermaid
-sequenceDiagram
-    participant U as Usuario
-    participant B as Navegador
-    participant A as Aplicación
-    U->>B: Introduce credenciales
-    B->>A: HTTPS
-    A-->>B: Cookie Secure + HttpOnly
-    B->>A: Comando autenticado
-    A-->>B: Resultado autorizado
-```
+## 7. Estado y hoja de ruta
 
-### 5.2 Exposición y controles
-
-| Superficie | Visibilidad | Control mínimo |
-|---|---|---|
-| Aplicación | LAN doméstica | HTTPS y autenticación |
-| HTTP | Solo localhost | Sin exposición a otros dispositivos |
-| Base de datos | Host local | Sin puerto de red |
-| Backups | Sistema de archivos | Permisos restringidos |
-| Logs | Host local | Sin secretos ni datos financieros innecesarios |
-
-### 5.3 Recuperación
-
-```mermaid
-flowchart LR
-    INCIDENT["Fallo detectado"] --> STOP["Detener escrituras"]
-    STOP --> SELECT["Seleccionar backup válido"]
-    SELECT --> RESTORE["Restaurar"]
-    RESTORE --> VERIFY["Verificar SQLite e invariantes"]
-    VERIFY --> START["Reanudar servicio"]
-```
-
-### 5.4 Hardening
-
-| Control | Gate o evidencia | Estado |
-|---|---|---|
-| Secretos | Gitleaks | Activo |
-| Código inseguro | Semgrep | Activo |
-| Dependencias Python | pip-audit | Activo |
-| Cookies seguras | Prueba de aceptación | Pendiente |
-| CSRF | Prueba de aceptación según mecanismo de sesión | Pendiente |
-| Usuario sin privilegios | Verificación de despliegue | Pendiente |
-
-## 6. Calidad
-
-### 6.1 Flujo de calidad
-
-```mermaid
-sequenceDiagram
-    participant D as Desarrollo
-    participant G as ai-eng gates
-    participant T as Pruebas
-    participant R as Revisión
-    D->>G: Cambio
-    G->>T: Validación habilitada
-    T->>R: Evidencia
-    R-->>D: Aprobación o corrección
-```
-
-| Gate | Criterio |
+| Spec/capacidad | Estado |
 |---|---|
-| Contabilidad | Invariantes cubiertas por pruebas |
-| Seguridad | Sin findings bloqueantes |
-| Migraciones | Aplicación y recuperación verificadas |
-| Documentación | README, CHANGELOG y Solution Intent coherentes |
-| Aceptación | Escenarios de `spec-001` demostrables |
+| `spec-001` núcleo financiero y operación Windows | `in_progress`, HITL confirmado |
+| Pasivos y periodicidad | Backlog |
+| Presupuesto y previsión | Backlog |
+| Varios usuarios y espacios compartidos | Backlog |
+| Copia externa y recuperación ante pérdida física | Backlog |
 
-### 6.2 Estrategia de pruebas
+`spec-001` no se declara `SHIPPED` hasta que el PR esté fusionado, todos los
+checks —incluido `windows-deployment`— estén verdes y la spec quede consolidada.
 
-| Nivel | Objetivo | Estado |
+| Riesgo | Severidad | Tratamiento |
 |---|---|---|
-| Dominio | Invariantes y transiciones | Pendiente |
-| Persistencia | Atomicidad, migraciones y SQLite | Pendiente |
-| API | Comandos y autorización | Pendiente |
-| Interfaz | Flujos accesibles | Pendiente |
-| Extremo a extremo | Escenarios principales y restauración | Pendiente |
-
-### 6.3 Escalabilidad
-
-| Dimensión | Objetivo inicial | Evolución |
-|---|---|---|
-| Usuarios | Hogar y baja concurrencia | Espacios compartidos |
-| Escrituras | Un proceso backend | Reevaluar solo con evidencia |
-| Moneda | EUR | Multimoneda fuera de V1 |
-| Clasificación | Categorías planas | Subcategorías |
-| Persistencia | SQLite | PostgreSQL solo por necesidad demostrada |
-
-## 7. Próximos objetivos
-
-### 7.1 Hoja de ruta
-
-| Fase | Alcance | Estado |
-|---|---|---|
-| Núcleo financiero | Usuario, espacio, cuentas, categorías, operaciones básicas, conciliación, backup | `spec-001` en borrador |
-| Pasivos | Tarjetas de crédito, préstamos y deudas por cobrar/pagar | Planificada |
-| Periodicidad | Recurrentes, obligaciones, devengos y reservas | Planificada |
-| Presupuesto | Asignaciones mensuales, financiación entre periodos y dinero disponible | Planificada |
-| Análisis avanzado | Dashboard presupuestario, previsiones y calidad de datos | Planificada |
-| Evolución doméstica | Subcategorías, varios usuarios y espacios compartidos/familiares | Planificada |
-
-### 7.2 Capacidades activas
-
-| Capacidad | Prioridad | Estado |
-|---|---|---|
-| Núcleo contable accesible | Alta | Refinamiento |
-| Recuperación doméstica | Alta | Refinamiento |
-| Pasivos y periodicidad | Media | Backlog |
-| Presupuesto y previsión | Media | Backlog |
-| Colaboración familiar | Baja | Backlog |
-
-### 7.3 Indicadores
-
-| Indicador | Objetivo | Actual |
-|---|---|---|
-| Transacciones desequilibradas aceptadas | 0 | Sin implementación |
-| Escenarios de aceptación superados | 100 % de `spec-001` | Sin implementación |
-| Restauraciones verificadas antes de entrega | 1 como mínimo | 0 |
-| Findings bloqueantes al entregar | 0 | 0 |
-
-### 7.4 Especificación activa
-
-| Spec | Título | Estado | Ruta |
-|---|---|---|---|
-| `spec-001` | Primera versión de Personal Finance | Draft | `.ai-engineering/specs/spec.md` |
-
-### 7.5 Riesgos y bloqueos
-
-| ID | Riesgo | Severidad | Mitigación |
-|---|---|---|---|
-| R-01 | Alcance vuelve a crecer hasta abarcar toda la visión | Alta | Una spec por bloque de roadmap |
-| R-02 | Complejidad contable visible para el usuario | Alta | Vocabulario y comandos accesibles |
-| R-03 | Copia válida pero restauración fallida | Alta | Prueba real de restauración |
-| R-04 | Sesión expuesta dentro de la LAN | Alta | HTTPS obligatorio |
-| R-05 | Duplicidad de fuentes de saldo | Alta | Libro como única fuente canónica |
+| Crecimiento de alcance | Alta | Una spec por bloque de roadmap |
+| Complejidad contable visible | Alta | Lenguaje y comandos cotidianos |
+| Restauración fallida | Alta | Restore aislado real antes de entregar |
+| Tráfico HTTP observable en LAN | Alta | Red de confianza, firewall, riesgo aceptado con revisión |
+| Pérdida física del host | Alta | Fuera de V1; planificar copia externa |
+| Duplicidad de saldos | Alta | Libro como única fuente canónica |

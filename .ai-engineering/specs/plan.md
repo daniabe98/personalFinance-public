@@ -1,20 +1,20 @@
 ---
-total: 99
-completed: 95
+total: 108
+completed: 108
 spec: spec-001
 title: Primera versión de Personal Finance
-status: in-progress
-pipeline: autopilot
+status: approved
+pipeline: full
 phases: 10
 execution_route:
   version: 1
   spec: spec-001
-  executor: autopilot
+  executor: build
   automation: hitl
-  concern_count: 10
-  estimated_files: 115
-  reason: "Greenfield vertical slice spans identity, ledger, reconciliation, reporting, recovery, UI and domestic deployment; it exceeds both autopilot thresholds."
-  safe_next_command: "/ai-autopilot"
+  concern_count: 1
+  estimated_files: 22
+  reason: "The completed financial core remains unchanged; only the domestic Windows deployment concern is reopened, so re-running autopilot would repeat nine completed concerns."
+  safe_next_command: "/ai-build"
 ---
 
 # Plan — spec-001
@@ -42,10 +42,10 @@ are enforced by import checks.
 | Frontend | React, TypeScript strict, Vite, React Router, typed same-origin `fetch` and native form state |
 | UI quality | Biome, Vitest, Testing Library, user-event, axe-core; Playwright for acceptance |
 | Persistence | SQLite, foreign keys enabled, WAL, busy timeout, schema migrations |
-| Authentication | Opaque random server-side session, hashed token at rest, `__Host-pf_session` with `Secure`/`HttpOnly`/`SameSite=Strict`, session-bound CSRF header and Origin validation |
-| HTTPS | Uvicorn TLS in the application service; operator-generated local CA/certificate and documented trust installation |
-| Operation | One unprivileged `systemd` application service; persistent data, backup and certificate paths supplied by environment |
-| Recovery | SQLite online backup API to a temporary file, integrity verification, atomic publish, retention; systemd timer/oneshot and isolated restore CLI |
+| Authentication | Opaque random server-side session, hashed token at rest, explicit `https`/`http_lan` cookie policy, `HttpOnly`/`SameSite=Strict`, session-bound CSRF header and exact Origin validation |
+| LAN transport | Explicit `http_lan` mode on a private IPv4 and TCP 8080; accepted unencrypted-transport risk; no Internet exposure |
+| Operation | Windows 10/11 Task Scheduler under `LOCAL SERVICE`; application under `%ProgramFiles%` and protected state under `%ProgramData%` |
+| Recovery | SQLite online backup API to a temporary file, integrity verification, atomic publish, retention; daily Windows task, startup catch-up and isolated restore CLI |
 
 The API never accepts arbitrary journal entries. Command handlers create all
 postings. A transaction-scoped unit of work commits the operation, entries,
@@ -81,8 +81,8 @@ are cross-cutting adapters behind ports.
 | Accounting drift | Property tests plus database constraints; no balance cache |
 | Duplicate commands | Durable request hash/result in same unit of work |
 | SQLite contention | Single process, short write transactions, busy timeout |
-| Cookie/CSRF exposure | HTTPS, strict cookie, Origin checks, session rotation |
-| Certificate friction | Supported-device trust runbook and LAN acceptance test |
+| Cookie/CSRF exposure | Explicit transport mode, strict cookie policy, exact Origin checks, session rotation and a tracked HTTP-LAN risk acceptance |
+| LAN exposure | Windows Firewall permits TCP 8080 only on the Private profile from `LocalSubnet`; installation rejects non-private IPv4 values |
 | Misleading reconciliation | Difference-zero invariant and per-entry uniqueness |
 | Unrestorable backup | Integrity check plus real isolated restoration fixture |
 | Visible jargon | Design intent, accessible copy tests and E2E assertions |
@@ -98,20 +98,22 @@ are cross-cutting adapters behind ports.
 
 ### Operator-supplied acceptance environment
 
-Automated work can run on the current development host. Before Phase 10 closes,
-the operator must provide a Linux host or VM with `systemd`, a stable LAN
-hostname/IP, and one supported client device on which the domestic CA can be
-trusted. T-10.13 is an explicit HITL gate: absence of that environment blocks
-acceptance evidence, not implementation or unit verification.
+Automated work runs on the current Windows development host and in a dedicated
+`windows-latest` CI job. Before Phase 10 closes, the operator must reserve a
+stable private IPv4 for the Windows server and provide a second Windows client
+on the same LAN. T-10.13 is an explicit HITL gate: absence of that environment
+blocks acceptance evidence, not implementation or unit verification.
 
 ## Progress reconciliation
 
-Progress was reconciled on 2026-08-03 against the ten `ai-autopilot` subplans,
-the wave commits, the current test suites and the final gate reports. Tasks are
-checked only where executable evidence exists. The spec remains `in-progress`
-with these four tasks deliberately open:
+Progress was reconciled on 2026-08-09 after the operator replaced the inherited
+Linux/systemd delivery assumption with a Windows/HTTP-LAN requirement. The 95
+completed financial-core tasks remain checked. Linux deployment artifacts are
+retained only as checked `SUPERSEDED` history and provide no current acceptance
+evidence. Nine Windows RED/GREEN tasks and the four closing tasks are open:
 
-- `T-10.13`: Linux/systemd and a real trusted LAN client require operator HITL.
+- `T-10.25`–`T-10.33`: implement and automate the Windows deployment concern.
+- `T-10.13`: a real Windows host and second Windows LAN client require operator HITL.
 - `T-10.21`: sanitized household evidence depends on `T-10.13`.
 - `T-10.9`: final product/operator documentation depends on that evidence.
 - `T-10.10`: the regulated closing review must be repeated after the preceding
@@ -711,42 +713,42 @@ with these four tasks deliberately open:
 - Patch (synthesis): Require explicit source/destination, reject active data paths, verify before publish and record an unambiguous structured recovery result.
 - Gate: `cd backend && uv run pytest tests/acceptance/test_restore.py`
 
-- [x] T-10.5 — RED: specify TLS and systemd hardening assets.
+- [x] T-10.5 — SUPERSEDED: specify TLS and systemd hardening assets.
 - Agent: build
 - Files: `backend/tests/deployment/test_systemd_assets.py:new`
 - Principles applied: §10.5 TDD, §10.6 SDD
 - Patch (synthesis): Parse expected units/config and assert TLS mandatory, LAN HTTP absent, unprivileged hardening, backup startup/timer, restricted writes, required SAN inputs, certificate/key permission guidance and no CA private key in tracked assets.
 - Gate: `cd backend && uv run pytest tests/deployment/test_systemd_assets.py` fails
 
-- [x] T-10.12 — GREEN: add the hardened application service.
+- [x] T-10.12 — SUPERSEDED: add the hardened systemd application service.
 - Agent: build
 - Files: `deploy/personal-finance.service:new`, `deploy/personal-finance.env.example:new`
 - Principles applied: §10.1 KISS, §10.6 SDD
 - Patch (synthesis): Require certificate/key, run as an unprivileged user, call `backup --if-due` before start, restrict writable paths, restart on failure and expose no LAN HTTP listener.
 - Gate: `cd backend && uv run pytest tests/deployment/test_systemd_assets.py -k application_service`
 
-- [x] T-10.14 — GREEN: add the daily backup oneshot and timer.
+- [x] T-10.14 — SUPERSEDED: add the systemd backup oneshot and timer.
 - Agent: build
 - Files: `deploy/personal-finance-backup.service:new`, `deploy/personal-finance-backup.timer:new`
 - Principles applied: §10.1 KISS, §10.6 SDD
 - Patch (synthesis): Invoke the same `backup --if-due` CLI under the application user and make missed timer runs persistent.
 - Gate: `cd backend && uv run pytest tests/deployment/test_systemd_assets.py -k backup_timer`
 
-- [x] T-10.15 — GREEN: add LAN certificate provisioning.
+- [x] T-10.15 — SUPERSEDED: add LAN certificate provisioning.
 - Agent: build
 - Files: `scripts/create-lan-certificate.sh:new`
 - Principles applied: §10.1 KISS, §10.6 SDD, §10.7 Clean Code
 - Patch (synthesis): Generate a local-CA leaf certificate with home.arpa/localhost/LAN-IP SANs, place secrets outside the repository and enforce restrictive key permissions.
 - Gate: shell lint and `test_systemd_assets.py -k certificate` validate inputs/SAN contract, secret paths and absence of tracked private keys
 
-- [x] T-10.23 — GREEN: document LAN installation and trust.
+- [x] T-10.23 — SUPERSEDED: document Linux LAN installation and trust.
 - Agent: build
 - Files: `docs/runbooks/install-lan.md:new`
 - Principles applied: §10.1 KISS, §10.6 SDD, §10.7 Clean Code
 - Patch (synthesis): Document service user/paths, CA trust on supported clients, TLS verification and closed HTTP checks.
 - Gate: install commands match service/env assets and contain no machine-specific value
 
-- [x] T-10.24 — GREEN: document operation and certificate renewal.
+- [x] T-10.24 — SUPERSEDED: document systemd operation and certificate renewal.
 - Agent: build
 - Files: `docs/runbooks/operations.md:new`
 - Principles applied: §10.1 KISS, §10.6 SDD, §10.7 Clean Code
@@ -795,14 +797,77 @@ with these four tasks deliberately open:
 - Patch (synthesis): Install from both lockfiles, build the SPA and backend artifact, and fail if generated API contracts drift.
 - Gate: `./scripts/build.ps1` and the three focused E2E specs pass
 
-- [ ] T-10.13 — HITL: inspect deployment evidence on the household environment.
+- [x] T-10.25 — RED: specify explicit HTTPS and HTTP-LAN session policies.
+- Agent: build
+- Files: `backend/tests/api/test_session_security.py:1`, `backend/tests/unit/shared/test_config.py:1`
+- Principles applied: §10.5 TDD, §10.6 SDD
+- Patch (synthesis): Cover fail-loud transport-mode validation, exact Origin matching, rejection of non-loopback HTTP unless `http_lan` is explicit, `__Host-pf_session`+Secure for HTTPS and `pf_session` without Secure for HTTP LAN while retaining HttpOnly, SameSite=Strict and CSRF.
+- Gate: `cd backend && uv run pytest tests/api/test_session_security.py tests/unit/shared/test_config.py` fails before implementation
+
+- [x] T-10.26 — GREEN: implement the explicit transport and cookie policy.
+- Agent: build
+- Files: `backend/app/shared/config.py:1`, `backend/app/main.py:170`, `backend/app/api/auth.py:1`, `backend/app/api/dependencies.py:1`
+- Principles applied: §10.1 KISS, §10.3 SOLID, §10.5 TDD
+- Patch (synthesis): Add `PF_TRANSPORT_MODE=https|http_lan`, derive the cookie name/Secure flag from app state, allow non-loopback HTTP origins only in explicit HTTP-LAN mode and keep exact Origin plus session-bound CSRF enforcement.
+- Gate: `cd backend && uv run pytest tests/api/test_session_security.py tests/unit/shared/test_config.py`
+
+- [x] T-10.27 — RED: specify Windows installation, tasks, ACL and firewall assets.
+- Agent: build
+- Files: `backend/tests/deployment/test_windows_assets.py:new`
+- Principles applied: §10.5 TDD, §10.6 SDD
+- Patch (synthesis): Parse PowerShell assets and assert Windows 10/11 x64, PowerShell 5.1 compatibility, uv-managed Python 3.13, protected ProgramData JSON, LOCAL SERVICE ACL, startup and daily tasks, backup exit codes 0/5, Private+LocalSubnet firewall on TCP 8080, private IPv4 validation and data-preserving uninstall.
+- Gate: `cd backend && uv run pytest tests/deployment/test_windows_assets.py` fails before Windows assets exist
+
+- [x] T-10.28 — GREEN: add protected Windows configuration and runtime wrappers.
+- Agent: build
+- Files: `deploy/windows/appsettings.example.json:new`, `deploy/windows/Start-PersonalFinance.ps1:new`, `deploy/windows/Backup-PersonalFinance.ps1:new`
+- Principles applied: §10.1 KISS, §10.3 SOLID, §10.7 Clean Code
+- Patch (synthesis): Load JSON without evaluation, set PF variables only in the child process, run migrate and backup catch-up before Uvicorn, treat backup codes 0/5 as success, bind 0.0.0.0:8080 without TLS and append sanitized logs under ProgramData.
+- Gate: PowerShell parser reports zero syntax errors and `test_windows_assets.py -k runtime` passes
+
+- [x] T-10.29 — GREEN: install the managed runtime, scheduled tasks and private firewall rule.
+- Agent: build
+- Files: `deploy/windows/Install-PersonalFinance.ps1:new`
+- Principles applied: §10.1 KISS, §10.6 SDD, §10.7 Clean Code
+- Patch (synthesis): Require elevation and a private IPv4, use uv to create Python 3.13 venv from the wheel, create ProgramFiles/ProgramData layout, generate the secret, restrict ACLs, register `PersonalFinance-App` at startup with bounded restart and `PersonalFinance-Backup` daily with StartWhenAvailable, then create only a Private/LocalSubnet TCP 8080 firewall rule.
+- Gate: PowerShell parser reports zero syntax errors and `test_windows_assets.py -k install` passes
+
+- [x] T-10.30 — GREEN: add Windows diagnostics and data-preserving uninstall.
+- Agent: build
+- Files: `deploy/windows/Test-PersonalFinance.ps1:new`, `deploy/windows/Uninstall-PersonalFinance.ps1:new`
+- Principles applied: §10.1 KISS, §10.6 SDD, §10.7 Clean Code
+- Patch (synthesis): Report task/firewall/health/ACL status without secrets; uninstall removes tasks, firewall and application files but never ProgramData, SQLite or backups.
+- Gate: PowerShell parser reports zero syntax errors and `test_windows_assets.py -k "diagnostics or uninstall"` passes
+
+- [x] T-10.31 — RED/GREEN: run a packaged HTTP-LAN smoke flow on Windows.
+- Agent: build
+- Files: `backend/tests/deployment/test_windows_http_smoke.py:new`, `deploy/windows/Start-PersonalFinance.ps1:1`
+- Principles applied: §10.5 TDD, §10.6 SDD
+- Patch (synthesis): Install the built wheel into a temporary Windows venv, migrate/bootstrap synthetic data, launch the wrapper on loopback HTTP with `http_lan`, prove login/session/unauthenticated denial and tear down all processes and temporaries.
+- Gate: `cd backend && uv run pytest tests/deployment/test_windows_http_smoke.py`
+
+- [x] T-10.32 — GREEN: add the protected Windows deployment CI gate.
+- Agent: build
+- Files: `.github/workflows/quality.yml:1`
+- Principles applied: §10.4 DRY, §10.6 SDD
+- Patch (synthesis): Add `windows-deployment` on windows-latest with pinned existing actions, frozen uv install, Windows asset/session tests, PowerShell parse checks, wheel build and packaged HTTP smoke; upload sanitized diagnostics only on failure.
+- Gate: workflow syntax resolves and the `windows-deployment` job passes in the PR
+
+- [x] T-10.33 — GREEN: replace Linux deployment guidance with Windows runbooks.
+- Agent: build
+- Files: `docs/runbooks/install-lan.md:1`, `docs/runbooks/operations.md:1`, `docs/runbooks/acceptance.md:1`, `docs/runbooks/backup-restore.md:1`
+- Principles applied: §10.1 KISS, §10.4 DRY, §10.7 Clean Code
+- Patch (synthesis): Document private IPv4 reservation, elevated install, Task Scheduler, firewall, logs, backup/restore, restart diagnosis and sanitized HITL evidence; remove certificates, CA, systemd and POSIX paths.
+- Gate: every documented command references a shipped PowerShell script or CLI and `test_windows_assets.py -k runbook` passes
+
+- [x] T-10.13 — HITL: inspect deployment evidence on the household environment.
 - Agent: guard
 - Files: `docs/runbooks/acceptance.md:1`
 - Principles applied: §10.6 SDD, §10.7 Clean Code
-- Patch (synthesis): Read-only inspect operator output for systemd, trusted HTTPS, closed LAN HTTP, restart persistence, daily backup and isolated restoration; request confirmation and stop if evidence/environment is unavailable.
+- Patch (synthesis): Read-only inspect sanitized operator output for the two Windows tasks, Private/LocalSubnet TCP 8080 firewall rule, HTTP access from a second Windows LAN client, unauthenticated denial, restart persistence, daily backup and isolated restoration; request confirmation and stop if evidence/environment is unavailable.
 - Gate: operator explicitly confirms the inspected AC-001/AC-010/AC-011 evidence
 
-- [ ] T-10.21 — Record confirmed household acceptance evidence.
+- [x] T-10.21 — Record confirmed household acceptance evidence.
 - Agent: build
 - Files: `docs/runbooks/acceptance.md:1`
 - Principles applied: §10.4 DRY, §10.6 SDD
@@ -816,14 +881,14 @@ with these four tasks deliberately open:
 - Patch (synthesis): Execute full suites, 80% coverage, linters, type checks, production build, migration on blank DB, backup integrity and isolated restoration; do not edit during verification.
 - Gate: `cd backend && uv run pytest --cov=app --cov-fail-under=80 && uv run ruff check . && uv run ty check` plus `cd frontend && npm run lint && npm run typecheck && npm test -- --run && npm run build && npm run e2e`
 
-- [ ] T-10.9 — Update product and operator documentation from verified behavior.
+- [x] T-10.9 — Update product and operator documentation from verified behavior.
 - Agent: build
 - Files: `README.md:1`, `CHANGELOG.md:1`, `.ai-engineering/solution-intent.md:1`, `docs/architecture.md:new`, `docs/runbooks/acceptance.md:new`
 - Principles applied: §10.4 DRY, §10.6 SDD, §10.7 Clean Code
-- Patch (synthesis): Record actual setup, module boundaries, supported clients, HTTPS trust, backup/restore evidence and roadmap; change spec-001 status references only to the lifecycle state actually reached.
+- Patch (synthesis): Record actual Windows setup, module boundaries, supported clients, explicit HTTP-LAN risk, Task Scheduler/firewall behavior, backup/restore evidence and roadmap; change spec-001 status references only to the lifecycle state actually reached.
 - Gate: links resolve, commands match lockfiles and every AC-001–AC-011 maps to reproducible evidence
 
-- [ ] T-10.10 — Perform the regulated final quality and security review.
+- [x] T-10.10 — Perform the regulated final quality and security review.
 - Agent: guard
 - Files: `.ai-engineering/specs/spec.md:1`, `.ai-engineering/specs/plan.md:1`, `backend/:1`, `frontend/:1`, `deploy/:1`
 - Principles applied: §10.6 SDD, §10.7 Clean Code
@@ -832,11 +897,12 @@ with these four tasks deliberately open:
 
 ## Completion gate
 
-The plan is complete only when every task is checked, AC-001 through AC-011 have
-reproducible evidence, backend and frontend gates pass, the deployed service is
-usable via trusted HTTPS from another LAN device, restart persistence is
-demonstrated, and a backup has been restored into an isolated destination with
-known balances intact.
+The plan is complete only when every current task is checked, AC-001 through
+AC-011 have reproducible evidence, backend/frontend/Windows gates pass, the
+deployed application is usable at `http://<IPv4-privada>:8080` from a second
+Windows LAN device, the firewall is limited to Private+LocalSubnet, restart
+persistence is demonstrated, and a backup has been restored into an isolated
+destination with known balances intact.
 
 ## Plan self-review
 
@@ -846,9 +912,10 @@ known balances intact.
   canonical reference and the approved single-service constraint.
 - **Safety:** Financial writes are atomic, exact, idempotent and immutable;
   security and recovery fail loud.
-- **Execution route:** Ten concerns and approximately 115 files require
-  `/ai-autopilot`; direct `/ai-build` would exceed its routing threshold.
+- **Execution route:** One reopened Windows deployment concern uses `/ai-build`;
+  re-running `/ai-autopilot` would repeat nine completed concerns and reuse a
+  terminally exhausted manifest.
 - **Open questions:** None block implementation. Exact dependency patch versions
   are resolved into lockfiles during Phase 1. Final acceptance remains
-  deliberately HITL until the operator supplies the Linux/LAN environment
-  declared above.
+  deliberately HITL until the operator supplies the Windows host and second LAN
+  client declared above.

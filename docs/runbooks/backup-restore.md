@@ -7,20 +7,31 @@ verificadas indicado por la retención.
 
 ## Preparación
 
-- Sustituye `<APP_COMMAND>` por el comando local que ejecuta
-  `backend.app.cli`.
+- Sustituye `<APP_COMMAND>` por
+  `%ProgramFiles%\PersonalFinance\venv\Scripts\personal-finance.exe`.
 - Sustituye `<BACKUP_FILE>` por una copia que el estado local declare
   verificada.
 - Sustituye `<ISOLATED_DESTINATION>` por un archivo nuevo en un directorio de
   ensayo. No puede ser la base activa ni un enlace que llegue a ella.
-- Ejecuta los comandos con la misma cuenta local que administra la aplicación.
-  La base activa y el directorio de copias no deben ser legibles por otras
-  cuentas.
+- Ejecuta los comandos desde PowerShell elevado. La ACL limita el acceso a
+  Administradores, SYSTEM y `LOCAL SERVICE`.
 
 La zona IANA y la retención proceden de `PF_DOMESTIC_TIMEZONE` y
 `PF_BACKUP_RETENTION`. La fecha se calcula una vez al iniciar cada intento. Un
 segundo catch-up en la misma fecha devuelve “ya existe una copia verificada” y
 no crea otra.
+
+Antes de invocar directamente el CLI, carga el JSON protegido solo en el
+proceso elevado actual (no en argumentos ni en variables persistentes):
+
+```powershell
+$config = Get-Content "$env:ProgramData\PersonalFinance\config\appsettings.json" -Raw | ConvertFrom-Json
+$allowed = @("PF_ALLOWED_ORIGIN", "PF_BACKUP_DIRECTORY", "PF_BACKUP_RETENTION", "PF_DATABASE_URL", "PF_DOMESTIC_TIMEZONE", "PF_SECRET_KEY", "PF_TRANSPORT_MODE")
+foreach ($property in $config.PSObject.Properties) {
+  if ($allowed -notcontains $property.Name) { throw "Clave de configuración no admitida" }
+  [Environment]::SetEnvironmentVariable($property.Name, [string]$property.Value, "Process")
+}
+```
 
 ## Crear o recuperar la copia diaria
 
@@ -28,9 +39,9 @@ no crea otra.
 <APP_COMMAND> backup --if-due
 ```
 
-El proceso de arranque y el temporizador operativo pueden ejecutar el mismo
+El proceso de arranque y la tarea diaria pueden ejecutar el mismo
 comando: la reclamación durable por fecha evita declarar dos éxitos. La
-configuración concreta del temporizador pertenece al despliegue, no a este
+configuración concreta del Programador de tareas pertenece al despliegue, no a este
 runbook.
 
 Resultados:
@@ -72,6 +83,13 @@ SELECT version_num FROM alembic_version;
 El primer resultado debe ser exactamente `ok`. Además, recalcula desde los
 apuntes las entidades y saldos conocidos del ensayo y compáralos con la huella
 previa. No aceptes solo que el archivo exista.
+
+La instalación administrada incluye Python, por lo que puedes obtener el
+resultado sin instalar herramientas adicionales:
+
+```powershell
+& "$env:ProgramFiles\PersonalFinance\venv\Scripts\python.exe" -c "import sqlite3,sys; print(sqlite3.connect(sys.argv[1]).execute('PRAGMA integrity_check').fetchone()[0])" <ISOLATED_DESTINATION>
+```
 
 ## Diagnóstico y límites
 
