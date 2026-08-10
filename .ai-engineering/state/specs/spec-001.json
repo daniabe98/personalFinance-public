@@ -2,10 +2,10 @@
   "branch": "codex/spec-001-delivery",
   "created": "2026-07-23T18:34:45.970902+00:00",
   "extra": {},
-  "pr": null,
-  "shipped": null,
+  "pr": "2",
+  "shipped": "2026-08-10T19:33:41.673148+00:00",
   "slug": "personal-finance-v1",
   "spec_id": "spec-001",
-  "state": "in_progress",
+  "state": "shipped",
   "title": "Primera versi\u00f3n de Personal Finance"
 }

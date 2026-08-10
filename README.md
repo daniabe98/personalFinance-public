@@ -113,9 +113,9 @@ ai-eng verify
 
 ## Estado
 
-`spec-001` permanece `in_progress` hasta que el pull request, incluido el check
-obligatorio `windows-deployment`, esté verde, fusionado y consolidado. La
-aceptación HITL doméstica se confirmó el 2026-08-10.
+`spec-001` está `SHIPPED` y consolidada tras el squash merge del PR #2 con todos
+los checks requeridos en verde, incluido `windows-deployment`. La aceptación
+HITL doméstica se confirmó el 2026-08-10.
 
 ## Licencia
 
