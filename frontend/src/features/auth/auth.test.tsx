@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import "../../test/setup";
 import type { ApiClient, ApiRequestOptions, ApiResult } from "../../api/client";
 import { createAuthApi, type AuthApi, type SessionResult } from "./api";
-import { LoginPage } from "./login-page";
+import { connectionIsAllowed, LoginPage } from "./login-page";
 import { SessionProvider, useSession } from "./session-provider";
 
 function AnonymousState(): React.JSX.Element {
@@ -24,6 +24,24 @@ function AnonymousState(): React.JSX.Element {
   }
   return <LoginPage />;
 }
+
+describe("login transport policy", () => {
+  it.each([
+    ["https:", "finance.test", true],
+    ["http:", "localhost", true],
+    ["http:", "127.0.0.1", true],
+    ["http:", "10.20.30.40", true],
+    ["http:", "172.16.0.10", true],
+    ["http:", "172.31.255.250", true],
+    ["http:", "192.168.1.50", true],
+    ["http:", "172.32.0.10", false],
+    ["http:", "169.254.1.10", false],
+    ["http:", "192.0.2.10", false],
+    ["http:", "8.8.8.8", false],
+  ])("allows %s//%s only when trusted: %s", (protocol, hostname, expected) => {
+    expect(connectionIsAllowed({ protocol, hostname })).toBe(expected);
+  });
+});
 
 describe("authentication boundary", () => {
   it("maps the closed session endpoints and public failure reasons", async () => {

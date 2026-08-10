@@ -10,6 +10,7 @@ import {
 } from "./features/reconciliation/page";
 import { ReportsSummary, type ReportsApi } from "./features/reports/summary";
 import { SettingsPage, type SettingsApi } from "./features/settings/page";
+import { createIdempotencyKey } from "./lib/idempotency-key";
 import { createAppRouter, type ControlRoutePages } from "./router";
 
 type ViewResult<T> =
@@ -65,7 +66,7 @@ function reconciliationApi(client: ApiClient): ReconciliationApi {
         await client.request("/api/v1/reconciliations", {
           method: "POST",
           body: { ...request },
-          idempotencyKey: crypto.randomUUID(),
+          idempotencyKey: createIdempotencyKey(),
         }),
       );
     },

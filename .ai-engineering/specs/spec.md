@@ -57,16 +57,19 @@ verificada.
   de reiniciar; reutilizar la clave con un payload diferente es rechazado.
 - Registrar eventos de auditoría para autenticación, contabilización, reversión,
   conciliación, backup y restauración sin incluir secretos.
-- Exigir HTTPS para accesos desde la red local y limitar HTTP a `localhost`;
-  proteger la sesión con una cookie no accesible a JavaScript y restringida al
-  mismo origen.
+- Permitir el acceso doméstico directo mediante `http://<IPv4-privada>:8080`
+  solo desde la subred privada autorizada por Windows Firewall; proteger la
+  sesión con una cookie no accesible a JavaScript, `SameSite=Strict` y origen
+  exacto. El transporte HTTP sin cifrar queda aceptado explícitamente como
+  riesgo doméstico y no puede exponerse a Internet.
 - Limitar el alta inicial y la recuperación de credenciales a una acción local
   sobre el servidor, invalidando las sesiones anteriores tras un restablecimiento.
 - Crear automáticamente una copia local diaria de SQLite, aplicar una retención
   configurable, verificar su integridad y demostrar una restauración real antes
   de aceptar la entrega.
-- Ejecutar la aplicación como un único servicio doméstico que conserva los datos
-  y vuelve a estar disponible después de reiniciar el servidor.
+- Ejecutar la aplicación en un host Windows 10/11 mediante una tarea programada
+  de arranque que conserva los datos y vuelve a estar disponible después de
+  reiniciar el ordenador servidor.
 - Usar lenguaje cotidiano en la interfaz y reservar la terminología contable
   para el modelo interno o vistas avanzadas.
 
@@ -92,12 +95,12 @@ verificada.
 
 ### AC-001 — Puesta en marcha
 
-1. La persona operadora completa el alta local y accede mediante HTTPS desde
-   otro dispositivo de la LAN.
+1. La persona operadora completa el alta local y accede desde otro dispositivo
+   Windows de la LAN mediante `http://<IPv4-privada>:8080`.
 2. La aplicación crea su espacio financiero personal.
 3. Una petición sin sesión válida no puede consultar ni modificar datos.
-4. HTTP desde otro dispositivo no permite usar la aplicación; `localhost` puede
-   habilitarse para diagnóstico local.
+4. Windows Firewall admite TCP 8080 únicamente en el perfil privado y desde
+   `LocalSubnet`; no existe una regla pública ni exposición a Internet.
 
 ### AC-002 — Configuración accesible
 
@@ -218,10 +221,14 @@ verificada.
    actual, intenta crearla sin duplicar una copia ya completada.
 7. Configurando una retención de tres copias y generando cuatro fechas válidas,
    solo se conservan las tres más recientes.
+8. El Programador de tareas ejecuta el backup diario y recupera una ejecución
+   perdida cuando el ordenador vuelve a estar disponible.
 
 ### AC-011 — Reinicio y auditoría
 
-1. Tras reiniciar el servidor, el servicio arranca y los datos permanecen.
+1. Tras reiniciar el ordenador servidor, `PersonalFinance-App` arranca mediante
+   el Programador de tareas, vuelve a escuchar en el puerto 8080 y los datos
+   permanecen.
 2. Los eventos relevantes registran fecha UTC, acción, resultado, actor,
    entidad o correlación y pueden consultarse solo con una sesión autorizada.
 3. Un fallo de contabilización, conciliación, backup o restauración queda
@@ -291,13 +298,15 @@ completo coincida; conciliar por apunte evita que comprobar una cara de una
 transferencia marque como comprobada la otra cuenta. El apunte de apertura forma
 el saldo base sin clasificarse como flujo de caja.
 
-### D-001-07 — HTTPS dentro de la LAN
+### D-001-07 — HTTPS dentro de la LAN (sustituida)
 
 Los accesos desde otros dispositivos usan HTTPS. HTTP se limita a `localhost`.
 
 **Rationale**: la aplicación transporta credenciales, cookies de sesión y datos
 financieros; HTTPS permite proteger confidencialidad e integridad y aplicar
 cookies `Secure`.
+
+Esta decisión queda sustituida por D-001-12 para la primera entrega doméstica.
 
 ### D-001-08 — Recuperación local demostrable
 
@@ -340,6 +349,18 @@ defecto la fecha doméstica de anulación.
 operación y cuándo se corrigió. Fechas explícitas mantienen trazabilidad entre
 periodos sin introducir todavía un modelo de cierre y reapertura.
 
+### D-001-12 — Despliegue Windows por HTTP privado
+
+La primera entrega se ejecuta en Windows 10/11 x64 mediante el Programador de
+tareas y se accede por `http://<IPv4-privada>:8080`. Windows Firewall limita el
+puerto 8080 al perfil privado y a `LocalSubnet`; el acceso por Internet permanece
+fuera de alcance. El modo `http_lan` debe configurarse explícitamente y usa una
+cookie `HttpOnly`, `SameSite=Strict` y sin el prefijo `__Host-`.
+
+**Rationale**: la persona operadora prioriza un despliegue doméstico sencillo por
+IP sin certificados, CA ni DNS. Acepta expresamente que el tráfico no está
+cifrado dentro de la LAN; esta aceptación no autoriza ampliar la frontera de red.
+
 ## Risks
 
 - **Alcance creciente**: cualquier capacidad de los Non-Goals requiere una spec
@@ -348,8 +369,10 @@ periodos sin introducir todavía un modelo de cierre y reapertura.
   acciones y mensajes comprensibles, no solo corrección interna.
 - **Duplicación por reintentos**: los comandos con efectos financieros deben
   conservar una identidad idempotente y devolver el resultado previo.
-- **Certificados domésticos difíciles de usar**: el plan debe escoger un proceso
-  de confianza local documentado y verificable en los dispositivos admitidos.
+- **HTTP doméstico sin cifrar**: credenciales y datos pueden ser observados por
+  un dispositivo con acceso a la LAN. El firewall debe limitar la exposición a
+  la subred privada y la decisión debe revisarse antes de habilitar acceso remoto
+  o ampliar el modelo de usuarios.
 - **Backup en el mismo servidor**: protege frente a errores lógicos, pero no
   frente a pérdida física; la copia externa permanece en la hoja de ruta.
 - **Restauración incompatible con migraciones**: cada cambio de esquema deberá
@@ -365,9 +388,7 @@ periodos sin introducir todavía un modelo de cierre y reapertura.
 - doc: CONSTITUTION.md
 - doc: especificacion_app_finanzas_personales_v1.md
 - doc: .ai-engineering/solution-intent.md
-- doc: https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html
 - doc: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie
-- research: .ai-engineering/runtime/research/https-aplicacion-domestica-lan-2026-07-23.md
 
 ## Open Questions
 

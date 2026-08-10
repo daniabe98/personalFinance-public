@@ -9,6 +9,7 @@ import type {
 import { formatEurCents, parseEurCents } from "../../lib/money";
 import { localCalendarDate } from "../../lib/local-date";
 import { ErrorMessage } from "../../ui/feedback";
+import { createIdempotencyKey } from "../../lib/idempotency-key";
 import type { MovementInput, TransactionsApi } from "./api";
 
 type EntryKind = Exclude<TransactionKind, "REVERSAL">;
@@ -123,7 +124,7 @@ export function TransactionForm({
     }
     const signature = JSON.stringify(summary);
     if (retry.current?.signature !== signature)
-      retry.current = { signature, key: crypto.randomUUID() };
+      retry.current = { signature, key: createIdempotencyKey() };
     const result =
       draft === null
         ? await api.post(summary, retry.current.key)

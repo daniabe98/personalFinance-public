@@ -18,6 +18,14 @@ class Base(DeclarativeBase):
 SessionFactory = Callable[[], Session]
 
 
+def register_orm_models() -> None:
+    """Load every mapped model before metadata-dependent work in fresh processes."""
+    from app.shared import models_control, models_identity, models_ledger
+
+    if not all(module.__name__ for module in (models_control, models_identity, models_ledger)):
+        raise RuntimeError("ORM model registration failed")
+
+
 def create_engine(database_url: str, *, busy_timeout_ms: int = 5_000) -> Engine:
     """Create a SQLite engine with integrity and contention safeguards."""
     engine = sqlalchemy_create_engine(
@@ -59,4 +67,5 @@ __all__ = (
     "create_engine",
     "create_session_factory",
     "database_is_ready",
+    "register_orm_models",
 )

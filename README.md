@@ -1,56 +1,122 @@
 # Personal Finance
 
-Aplicación web privada para registrar, consultar y analizar finanzas personales
-con rigor contable y una experiencia accesible.
+Aplicación web privada para registrar, consultar y analizar las finanzas del
+hogar con rigor contable y lenguaje accesible. La primera entrega funciona como
+un único servicio en Windows 10/11 x64 y se utiliza desde navegadores Windows de
+la misma red doméstica.
 
-El proyecto se encuentra en fase inicial: todavía no contiene una aplicación
-ejecutable. Este repositorio establece su gobierno de ingeniería y conserva una
-especificación orientativa que deberá revisarse y aprobarse antes de implementar
-el producto.
+## Funcionalidad
 
-## Inicio rápido
+- saldo inicial, ingresos, gastos y transferencias;
+- borradores, contabilización, reversión y conciliación;
+- saldos, patrimonio, devengo y tesorería;
+- sesión local, control CSRF y auditoría saneada;
+- backup diario verificado y restauración aislada.
 
-1. Instala `ai-eng` y las herramientas que indique su diagnóstico.
-2. Ejecuta `ai-eng doctor` desde la raíz del repositorio.
-3. Comprueba la configuración con `ai-eng check`.
+## Arquitectura
 
-## Instalación
+El frontend React/Vite se empaqueta dentro de un wheel Python. FastAPI sirve la
+SPA y `/api/v1` desde el mismo origen; SQLite permanece en el host y no expone
+ningún puerto de red. Consulta [docs/architecture.md](docs/architecture.md).
 
-La instalación de la aplicación está pendiente de definir. El stack de
-desarrollo configurado actualmente es Python y TypeScript.
+## Instalación doméstica Windows
 
-## Uso
+Requisitos: Windows 10/11 x64, PowerShell 5.1 o superior, privilegios de
+administrador, una IPv4 privada estable o reservada por DHCP y `uv` disponible.
+El instalador crea un Python 3.13 administrado por la aplicación.
 
-La aplicación aún no está implementada. El flujo de trabajo del repositorio se
-gestiona mediante `ai-eng`; las reglas principales del proyecto se encuentran
-en [CONSTITUTION.md](CONSTITUTION.md), y el documento
-[especificacion_app_finanzas_personales_v1.md](especificacion_app_finanzas_personales_v1.md)
-se utiliza únicamente como orientación para preparar la especificación
-canónica.
+Construye el frontend y el wheel desde el repositorio:
 
-## Configuración
+```powershell
+cd frontend
+npm ci
+npm run build
+cd ..\backend
+uv build
+cd ..
+```
 
-La configuración de gobierno está en `.ai-engineering/manifest.yml`. Las
-superficies generadas por `ai-eng`, incluida `.codex/`, no deben editarse
-manualmente.
+Después ejecuta PowerShell como administrador:
 
-Antes de trabajar en el producto, consulta también `AGENTS.md` para conocer las
-reglas aplicables al repositorio.
+```powershell
+.\deploy\windows\Install-PersonalFinance.ps1 `
+  -WheelPath .\backend\dist\personal_finance-0.1.0-py3-none-any.whl `
+  -ServerIp <IP-privada-estable> `
+  -StablePrivateIPv4Confirmed `
+  -BootstrapUsername <usuario> `
+  -SpaceName <espacio>
+```
 
-## Contribución
+El instalador solicita la contraseña sin incluirla en argumentos. Instala la
+aplicación en `%ProgramFiles%\PersonalFinance`, conserva configuración, SQLite,
+backups y logs en `%ProgramData%\PersonalFinance`, registra las tareas
+`PersonalFinance-App` y `PersonalFinance-Backup`, y abre TCP 8080 únicamente
+para el perfil Privado y `LocalSubnet`.
 
-Todo cambio debe realizarse en una rama distinta de `main`, seguir los gates de
-`ai-eng` y preservar las restricciones de `CONSTITUTION.md`. Antes de proponer
-una integración:
+Diagnóstico posterior:
+
+```powershell
+& "$env:ProgramFiles\PersonalFinance\Test-PersonalFinance.ps1" `
+  -ServerIp <IP-privada-estable>
+```
+
+La aplicación queda disponible en `http://<IP-privada-estable>:8080`.
+
+## Seguridad del transporte
+
+El modo doméstico requiere `PF_TRANSPORT_MODE=http_lan` de forma explícita y
+solo admite orígenes HTTP RFC1918 exactos. Usa una cookie `pf_session` con
+`HttpOnly` y `SameSite=Strict`; `Secure=false` es necesario porque no se
+distribuyen certificados. Las credenciales y los datos viajan sin cifrar dentro
+de la LAN, por lo que el servicio no debe publicarse en Internet ni utilizarse
+en una red que no sea de confianza. Este riesgo está aceptado y sujeto a
+revisión el 2027-08-09.
+
+El modo HTTPS se mantiene para pruebas internas y utiliza
+`__Host-pf_session`, `Secure=true`, origen exacto y CSRF.
+
+## Operación y recuperación
+
+- [Instalación LAN](docs/runbooks/install-lan.md)
+- [Operaciones y diagnóstico](docs/runbooks/operations.md)
+- [Backup y restauración](docs/runbooks/backup-restore.md)
+- [Aceptación doméstica](docs/runbooks/acceptance.md)
+
+El desinstalador elimina tareas, regla de firewall y archivos de aplicación,
+pero conserva siempre `%ProgramData%\PersonalFinance`, incluida la base de
+datos y las copias.
+
+## Desarrollo y calidad
+
+```powershell
+cd backend
+uv sync --dev
+uv run pytest --cov=app --cov-fail-under=80
+uv run ruff check .
+uv run ty check
+
+cd ..\frontend
+npm ci
+npm run lint
+npm run typecheck
+npm test -- --run
+npm run build
+```
+
+Los cambios siguen `ai-eng`, [CONSTITUTION.md](CONSTITUTION.md) y
+[AGENTS.md](AGENTS.md). Antes de integrar:
 
 ```powershell
 ai-eng check
-ai-eng doctor
+ai-eng verify
 ```
 
-No deben implementarse decisiones funcionales tomadas únicamente del documento
-orientativo sin que hayan pasado al proceso de especificación y aprobación.
+## Estado
+
+`spec-001` permanece `in_progress` hasta que el pull request, incluido el check
+obligatorio `windows-deployment`, esté verde, fusionado y consolidado. La
+aceptación HITL doméstica se confirmó el 2026-08-10.
 
 ## Licencia
 
-TBD. El proyecto todavía no ha definido una licencia.
+Pendiente de definición.

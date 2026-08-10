@@ -3,13 +3,38 @@ import { useState } from "react";
 import { ErrorMessage } from "../../ui/feedback";
 import { useSession } from "./session-provider";
 
-function connectionIsSafe(): boolean {
-  const hostname = window.location.hostname;
+type ConnectionLocation = Readonly<{
+  protocol: string;
+  hostname: string;
+}>;
+
+function isPrivateIpv4(hostname: string): boolean {
+  const octets = hostname.split(".").map(Number);
+  if (
+    octets.length !== 4 ||
+    octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)
+  ) {
+    return false;
+  }
+  const [first, second] = octets;
   return (
-    window.location.protocol === "https:" ||
+    first === 10 ||
+    (first === 172 && second !== undefined && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168)
+  );
+}
+
+export function connectionIsAllowed(
+  location: ConnectionLocation = window.location,
+): boolean {
+  const { hostname, protocol } = location;
+  return (
+    protocol === "https:" ||
     hostname === "localhost" ||
     hostname === "127.0.0.1" ||
-    hostname === "::1"
+    hostname === "::1" ||
+    hostname === "[::1]" ||
+    (protocol === "http:" && isPrivateIpv4(hostname))
   );
 }
 
@@ -23,7 +48,10 @@ export function LoginPage(): React.JSX.Element {
     readonly summary?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isSafe = connectionIsSafe();
+  const isAllowed = connectionIsAllowed();
+  const isHttpLan =
+    window.location.protocol === "http:" &&
+    isPrivateIpv4(window.location.hostname);
 
   if (session.state !== "anonymous") {
     return <p role="status">Preparando tu espacio…</p>;
@@ -65,11 +93,16 @@ export function LoginPage(): React.JSX.Element {
         <p className="eyebrow">Tu espacio privado</p>
         <h1 id="login-title">Acceder</h1>
         <p>Consulta y organiza tus finanzas desde tu red de confianza.</p>
-        {!isSafe ? (
+        {!isAllowed ? (
           <ErrorMessage>
-            Esta conexión no es segura. Abre la dirección HTTPS indicada por tu
-            servidor doméstico.
+            Esta dirección no está permitida. Usa HTTPS o la IPv4 privada
+            indicada por tu servidor doméstico.
           </ErrorMessage>
+        ) : null}
+        {isHttpLan ? (
+          <p className="surface-solid feedback" role="status">
+            Conexión HTTP limitada a tu red local de confianza.
+          </p>
         ) : null}
         {errors.summary !== undefined ? (
           <ErrorMessage>{errors.summary}</ErrorMessage>
@@ -117,7 +150,7 @@ export function LoginPage(): React.JSX.Element {
               </span>
             ) : null}
           </div>
-          <button disabled={isSubmitting || !isSafe} type="submit">
+          <button disabled={isSubmitting || !isAllowed} type="submit">
             {isSubmitting ? "Entrando…" : "Entrar"}
           </button>
         </form>
