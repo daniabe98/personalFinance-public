@@ -94,12 +94,14 @@ arquitectónica nueva porque el contrato de datos no cambia.
 
 ## Quality Outcome
 
-Pending.
+Initial assessment: 0 blockers, 0 criticals, 0 highs -> PASS (96/100,
+WARN por dos hallazgos low de infraestructura preexistente: CRLF global en
+Windows y contadores de plan no proyectados por `ai-eng spec verify`).
 
 ## Quality Remediation
 
 used: false
 max_attempts: 1
-final_reassessment: pending
+final_reassessment: not-required
 
 safe_next_command: `/ai-build`
