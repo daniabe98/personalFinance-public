@@ -28,6 +28,9 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/
 
 ### Changed
 
+- La actividad del periodo presenta ahora un resumen editorial responsive y
+  movimientos con fechas localizadas, importes firmados y enlaces de detalle
+  accesibles, sin cambiar los cálculos ni el orden del informe.
 - El despliegue doméstico de `spec-001` se replanificó para un host y clientes
   Windows mediante HTTP en una IPv4 privada estable y TCP 8080.
 - Las claves idempotentes del navegador incluyen un fallback UUID v4 compatible

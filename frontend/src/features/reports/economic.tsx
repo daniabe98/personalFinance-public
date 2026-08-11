@@ -1,5 +1,57 @@
 import { formatEurCents } from "../../lib/money";
 
+const economicDateFormatter = new Intl.DateTimeFormat("es-ES", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function formatEconomicDate(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (match === null) {
+    return isoDate;
+  }
+
+  const [, yearText, monthText, dayText] = match;
+  if (
+    yearText === undefined ||
+    monthText === undefined ||
+    dayText === undefined
+  ) {
+    return isoDate;
+  }
+
+  const date = new Date(
+    Date.UTC(
+      Number.parseInt(yearText, 10),
+      Number.parseInt(monthText, 10) - 1,
+      Number.parseInt(dayText, 10),
+    ),
+  );
+  return economicDateFormatter.format(date).replaceAll(".", "");
+}
+
+function formatSignedEurCents(amountCents: number): string {
+  if (amountCents > 0) {
+    return `+${formatEurCents(amountCents)}`;
+  }
+  if (amountCents < 0) {
+    return `−${formatEurCents(Math.abs(amountCents))}`;
+  }
+  return formatEurCents(amountCents);
+}
+
+function getContributionPresentation(amountCents: number): {
+  readonly label: "Movimiento" | "Sin impacto";
+  readonly modifier: "movement" | "neutral";
+} {
+  if (amountCents === 0) {
+    return { label: "Sin impacto", modifier: "neutral" };
+  }
+  return { label: "Movimiento", modifier: "movement" };
+}
+
 export interface Contribution {
   readonly transaction_id: string;
   readonly amount_cents: number;
@@ -24,42 +76,55 @@ export function EconomicReportView({
     report.result_cents === 0 &&
     report.contributions.length === 0;
   return (
-    <section aria-labelledby="economic-heading">
+    <section className="activity-report" aria-labelledby="economic-heading">
       <h2 id="economic-heading">Actividad del periodo</h2>
       {empty ? <p role="status">Sin actividad económica</p> : null}
-      <dl className="report-totals">
-        <div>
+      <dl className="activity-totals">
+        <div className="activity-total">
           <dt>Ingresos</dt>
           <dd className="money">{formatEurCents(report.income_cents)}</dd>
         </div>
-        <div>
+        <div className="activity-total">
           <dt>Gastos</dt>
           <dd className="money">{formatEurCents(report.expense_cents)}</dd>
         </div>
-        <div>
+        <div className="activity-total activity-total--result">
           <dt>Resultado</dt>
           <dd className="money">{formatEurCents(report.result_cents)}</dd>
         </div>
       </dl>
-      <ul className="item-list">
-        {report.contributions.map((item) => (
-          <li key={`${item.transaction_id}-${item.economic_date}`}>
-            <span>{item.economic_date}</span>
-            {item.amount_cents === report.income_cents ? (
-              <span className="money">
-                <span>{formatEurCents(item.amount_cents).slice(0, -2)}</span>
-                <span> €</span>
-              </span>
-            ) : (
-              <span className="money">{formatEurCents(item.amount_cents)}</span>
-            )}
-            <a
-              href={`/movimientos?transaccion=${encodeURIComponent(item.transaction_id)}`}
+      <ul className="activity-list">
+        {report.contributions.map((item, index) => {
+          const date = formatEconomicDate(item.economic_date);
+          const signedAmount = formatSignedEurCents(item.amount_cents);
+          const presentation = getContributionPresentation(item.amount_cents);
+
+          return (
+            <li
+              className={`activity-item activity-item--${presentation.modifier}`}
+              key={`${item.transaction_id}-${item.economic_date}`}
             >
-              Ver movimiento {item.transaction_id}
-            </a>
-          </li>
-        ))}
+              <div className="activity-context">
+                <time className="activity-date" dateTime={item.economic_date}>
+                  {date}
+                </time>
+                <span
+                  className={`activity-type activity-type--${presentation.modifier}`}
+                >
+                  {presentation.label}
+                </span>
+              </div>
+              <span className="activity-amount money">{signedAmount}</span>
+              <a
+                className="activity-action"
+                href={`/movimientos?transaccion=${encodeURIComponent(item.transaction_id)}`}
+                aria-label={`Ver detalle de ${presentation.label}, ${signedAmount}, ${date}, ${index + 1} de ${report.contributions.length}`}
+              >
+                Ver detalle
+              </a>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
