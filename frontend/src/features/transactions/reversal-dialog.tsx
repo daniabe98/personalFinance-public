@@ -34,7 +34,6 @@ export function ReversalDialog({
       {
         economic_date: economicDate,
         cash_date: cashDate,
-        description: "Movimiento compensatorio",
       },
       key,
     );
@@ -50,6 +49,10 @@ export function ReversalDialog({
       <p>
         El movimiento original seguirá visible. Se añadirá otro que compense su
         efecto.
+      </p>
+      <p>
+        La descripción se generará automáticamente a partir del movimiento
+        original.
       </p>
       {error ? (
         <ErrorMessage>

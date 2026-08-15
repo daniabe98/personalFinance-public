@@ -1,5 +1,5 @@
 import axe from "axe-core";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -95,18 +95,159 @@ describe("closed movement entry", () => {
     await user.type(screen.getByLabelText("Cantidad en euros"), "12,34");
     await user.selectOptions(screen.getByLabelText("Cuenta"), "a");
     await user.selectOptions(screen.getByLabelText("Categoría"), "c");
+    await user.type(screen.getByLabelText("Descripción"), "Nómina mensual");
     await user.click(
       screen.getByRole("button", { name: "Revisar movimiento" }),
     );
     expect(screen.getByText("12,34 €")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Contabilizar" }));
     expect(api.post).toHaveBeenCalledWith(
-      expect.objectContaining({ amount_cents: 1234, kind: "INCOME" }),
+      expect.objectContaining({
+        amount_cents: 1234,
+        description: "Nómina mensual",
+        kind: "INCOME",
+      }),
       expect.any(String),
     );
     expect(
       screen.queryByText(/\b(debe|haber|asiento)\b/i),
     ).not.toBeInTheDocument();
+  });
+
+  it("requires a trimmed description of 1–500 characters before review", async () => {
+    const user = userEvent.setup();
+    const api: TransactionsApi = {
+      list: vi.fn(),
+      createDraft: vi.fn(() => ok(transaction())),
+      updateDraft: vi.fn(),
+      discardDraft: vi.fn(),
+      postDraft: vi.fn(),
+      reverse: vi.fn(),
+      post: vi.fn(),
+    };
+    render(
+      <TransactionForm
+        api={api}
+        accounts={[
+          {
+            id: "a",
+            name: "Banco",
+            kind: "ASSET",
+            is_archived: false,
+            is_reconcilable: true,
+            balance_cents: 0,
+            currency: "EUR",
+          },
+        ]}
+        categories={[
+          { id: "c", name: "Nómina", kind: "INCOME", is_archived: false },
+        ]}
+        onSaved={() => undefined}
+      />,
+    );
+
+    const description = screen.getByLabelText("Descripción");
+    expect(description).toBeRequired();
+    expect(description).toHaveAttribute("maxlength", "500");
+    expect(description).toHaveAccessibleDescription("1–500 caracteres.");
+    await user.type(screen.getByLabelText("Cantidad en euros"), "12,34");
+    await user.selectOptions(screen.getByLabelText("Cuenta"), "a");
+    await user.selectOptions(screen.getByLabelText("Categoría"), "c");
+
+    await user.type(description, "   ");
+    await user.click(
+      screen.getByRole("button", { name: "Revisar movimiento" }),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Escribe una descripción de entre 1 y 500 caracteres.",
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Revisa antes de guardar" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(description, { target: { value: "x".repeat(501) } });
+    const form = description.closest("form");
+    expect(form).not.toBeNull();
+    if (form === null) throw new Error("Transaction form is missing");
+    fireEvent.submit(form);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Escribe una descripción de entre 1 y 500 caracteres.",
+    );
+
+    fireEvent.change(description, {
+      target: { value: "  Nómina mensual  " },
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Revisar movimiento" }),
+    );
+    expect(screen.getByText("Nómina mensual")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
+    expect(api.createDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ description: "Nómina mensual" }),
+    );
+  });
+
+  it("requires a legacy draft description and persists it before posting", async () => {
+    const user = userEvent.setup();
+    const legacyDraft = transaction({ description: null });
+    const updatedDraft = transaction({ description: "Nómina recuperada" });
+    const api: TransactionsApi = {
+      list: vi.fn(),
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(() => ok(updatedDraft)),
+      discardDraft: vi.fn(),
+      postDraft: vi.fn(() =>
+        ok({
+          transaction_id: legacyDraft.id,
+          status: "POSTED",
+          replayed: false,
+          replacement_transaction_id: null,
+        }),
+      ),
+      reverse: vi.fn(),
+      post: vi.fn(),
+    };
+    render(
+      <TransactionForm
+        accounts={[
+          {
+            id: "a",
+            name: "Banco",
+            kind: "ASSET",
+            is_archived: false,
+            is_reconcilable: true,
+            balance_cents: 0,
+            currency: "EUR",
+          },
+        ]}
+        api={api}
+        categories={[
+          { id: "c", name: "Nómina", kind: "INCOME", is_archived: false },
+        ]}
+        draft={legacyDraft}
+        onSaved={() => undefined}
+      />,
+    );
+
+    expect(screen.getByLabelText("Descripción")).toHaveValue("");
+    await user.type(screen.getByLabelText("Descripción"), "Nómina recuperada");
+    await user.click(
+      screen.getByRole("button", { name: "Revisar movimiento" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Contabilizar" }));
+
+    expect(api.updateDraft).toHaveBeenCalledWith(
+      legacyDraft.id,
+      expect.objectContaining({ description: "Nómina recuperada" }),
+    );
+    expect(api.postDraft).toHaveBeenCalledWith(
+      legacyDraft.id,
+      legacyDraft.cash_date,
+      expect.any(String),
+    );
+    expect(vi.mocked(api.updateDraft).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(api.postDraft).mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it("preloads and updates a draft before posting that same draft", async () => {
@@ -251,9 +392,18 @@ describe("closed movement entry", () => {
     expect(reverse).toHaveBeenCalled();
     expect(api.reverse).toHaveBeenCalledWith(
       "posted",
-      expect.objectContaining({ description: "Movimiento compensatorio" }),
+      {
+        economic_date: expect.any(String),
+        cash_date: expect.any(String),
+      },
       expect.any(String),
     );
+    expect(
+      screen.getByText(/La descripción se generará.*movimiento original/i),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("textbox", { name: /descripción/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps every state and relationship explicit, navigable and non-destructive", async () => {
@@ -381,7 +531,7 @@ describe("closed movement entry", () => {
     const input = {
       kind: "INCOME" as const,
       economic_date: "2026-07-23",
-      description: null,
+      description: "Nómina",
       amount_cents: 100,
       account_id: "a",
       category_id: "c",
@@ -399,7 +549,7 @@ describe("closed movement entry", () => {
     );
     await api.reverse(
       "tx",
-      { economic_date: "2026-07-23", cash_date: null, description: null },
+      { economic_date: "2026-07-23", cash_date: null },
       "key",
     );
     expect(calls).toHaveLength(8);

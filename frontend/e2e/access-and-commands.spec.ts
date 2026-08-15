@@ -75,7 +75,7 @@ async function prepareMovement(page: Page, movement: Movement): Promise<void> {
       .selectOption({ label: movement.destination });
   }
   await page.getByLabel("Fecha del movimiento").fill(movement.date);
-  await page.getByLabel("Descripción (opcional)").fill(movement.description);
+  await page.getByLabel("Descripción").fill(movement.description);
   await page.getByRole("button", { name: "Revisar movimiento" }).click();
   await expect(
     page.getByRole("heading", { name: "Revisa antes de guardar" }),
@@ -137,6 +137,11 @@ test("executes catalog and core financial commands against the packaged HTTPS ap
   ).toContainText("Deudas");
 
   await page.getByRole("link", { name: "Movimientos" }).click();
+  await expect(page.getByLabel("Descripción")).toHaveAttribute("required", "");
+  await expect(page.getByLabel("Descripción")).toHaveAttribute(
+    "maxlength",
+    "500",
+  );
   await postMovement(page, {
     action: "Indicar saldo inicial",
     amount: "1.000,00",
@@ -172,10 +177,13 @@ test("executes catalog and core financial commands against the packaged HTTPS ap
     account: "Cuenta diaria E2E",
     destination: "Ahorro E2E",
     date: DATES.transfer,
-    description: "Transferencia E2E",
+    description: "  Transferencia E2E  ",
   });
   await page.getByRole("button", { name: "Contabilizar" }).click();
   const capturedTransfer = await transferRequest;
+  expect(capturedTransfer.postDataJSON()).toMatchObject({
+    description: "Transferencia E2E",
+  });
   await expect(
     page.getByRole("listitem").filter({ hasText: "Transferencia E2E" }),
   ).toHaveCount(1);

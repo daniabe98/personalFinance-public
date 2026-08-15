@@ -1,4 +1,5 @@
 import { formatEurCents } from "../../lib/money";
+import { CompositionChart } from "./composition-chart";
 
 export interface CashReport {
   readonly receipts_cents: number;
@@ -30,6 +31,11 @@ export function CashReportView({
           </dd>
         </div>
       </dl>
+      <CompositionChart
+        title="Composición actual de Cobros y Pagos"
+        first={{ label: "Cobros", valueCents: report.receipts_cents }}
+        second={{ label: "Pagos", valueCents: report.payments_cents }}
+      />
     </section>
   );
 }

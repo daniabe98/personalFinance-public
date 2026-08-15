@@ -113,10 +113,10 @@ async function expectActivityReflow(
   ).toBe(expectedSummaryColumns);
 
   const detailTargets = await economic
-    .getByRole("link", { name: /^Ver detalle de Movimiento,/ })
-    .evaluateAll((links) =>
-      links.map((link) => {
-        const bounds = link.getBoundingClientRect();
+    .getByRole("button", { name: /^Ver detalle de / })
+    .evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const bounds = button.getBoundingClientRect();
         return { width: bounds.width, height: bounds.height };
       }),
     );
@@ -165,9 +165,11 @@ test("reverses, reconciles and reports exact cross-period effects on the real le
     page.getByRole("navigation", { name: "Navegación principal" }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Movimientos" }).click();
-  const original = page
-    .getByRole("listitem")
-    .filter({ hasText: scenario.incomeDescription });
+  const original = page.getByRole("listitem").filter({
+    has: page.locator("strong").filter({
+      hasText: new RegExp(`^${scenario.incomeDescription}$`),
+    }),
+  });
   await expect(original).toContainText("Contabilizado");
   await original
     .getByRole("button", { name: "Anular con un movimiento compensatorio" })
@@ -186,7 +188,7 @@ test("reverses, reconciles and reports exact cross-period effects on the real le
     .getByRole("listitem")
     .filter({
       has: page.locator("strong").filter({
-        hasText: /^Movimiento compensatorio$/,
+        hasText: new RegExp(`^Reversión de: ${scenario.incomeDescription}$`),
       }),
     })
     .filter({ hasText: "2025-02-05" });
@@ -228,10 +230,12 @@ test("reverses, reconciles and reports exact cross-period effects on the real le
     februaryMovement.locator('time[datetime="2025-02-05"]'),
   ).toHaveText("5 feb 2025");
   await expect(
-    januaryMovement.getByText("Movimiento", { exact: true }),
+    januaryMovement.getByText(scenario.incomeDescription, { exact: true }),
   ).toBeVisible();
   await expect(
-    februaryMovement.getByText("Movimiento", { exact: true }),
+    februaryMovement.getByText(`Reversión de: ${scenario.incomeDescription}`, {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     januaryMovement.getByText("+200,00 €", { exact: true }),
@@ -240,17 +244,40 @@ test("reverses, reconciles and reports exact cross-period effects on the real le
     februaryMovement.getByText("−200,00 €", { exact: true }),
   ).toBeVisible();
 
-  const januaryDetail = januaryMovement.getByRole("link", {
-    name: "Ver detalle de Movimiento, +200,00 €, 10 ene 2025, 1 de 2",
+  const januaryDetail = januaryMovement.getByRole("button", {
+    name: `Ver detalle de ${scenario.incomeDescription}, +200,00 €, 10 ene 2025, 1 de 2`,
   });
-  const februaryDetail = februaryMovement.getByRole("link", {
-    name: "Ver detalle de Movimiento, −200,00 €, 5 feb 2025, 2 de 2",
+  const februaryDetail = februaryMovement.getByRole("button", {
+    name: `Ver detalle de Reversión de: ${scenario.incomeDescription}, −200,00 €, 5 feb 2025, 2 de 2`,
   });
   await expect(januaryDetail).toHaveText("Ver detalle");
   await expect(februaryDetail).toHaveText("Ver detalle");
   await expect(activity).not.toContainText(
     /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
   );
+
+  const summaryUrl = page.url();
+  await januaryDetail.click();
+  const detailDialog = page.getByRole("dialog", {
+    name: scenario.incomeDescription,
+  });
+  await expect(detailDialog).toBeVisible();
+  expect(page.url()).toBe(summaryUrl);
+  await expect(detailDialog).toContainText("Ingreso");
+  await expect(detailDialog).toContainText("Anulado");
+  await expect(detailDialog).toContainText(scenario.accountName);
+  await expect(detailDialog).toContainText("Ingresos control E2E");
+  await expect(detailDialog).toContainText(
+    "Movimiento compensatorio relacionado",
+  );
+  await detailDialog.getByRole("button", { name: "Cerrar" }).click();
+  await expect(detailDialog).toHaveCount(0);
+  await expect(januaryDetail).toBeFocused();
+
+  await expect(page.getByRole("img", { name: /Cobros y Pagos/ })).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: /Activos y Compromisos/ }),
+  ).toBeVisible();
 
   await expectActivityReflow(page, economic, 375, 1);
   await expectActivityReflow(page, economic, 768, 3);
@@ -260,6 +287,7 @@ test("reverses, reconciles and reports exact cross-period effects on the real le
   const focusableElements = page.locator(
     'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
   );
+  await page.getByLabel("Hasta").focus();
   let reachedJanuaryDetailWithKeyboard = false;
   const tabLimit = (await focusableElements.count()) + 1;
   for (let tabIndex = 0; tabIndex < tabLimit; tabIndex += 1) {

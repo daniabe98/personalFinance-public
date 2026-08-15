@@ -1,4 +1,5 @@
 import { formatEurCents } from "../../lib/money";
+import { CompositionChart } from "./composition-chart";
 
 export interface NetWorthReport {
   readonly assets_cents: number;
@@ -28,6 +29,14 @@ export function NetWorthReportView({
           <dd className="money">{formatEurCents(report.net_worth_cents)}</dd>
         </div>
       </dl>
+      <CompositionChart
+        title="Composición actual de Activos y Compromisos"
+        first={{ label: "Activos", valueCents: report.assets_cents }}
+        second={{
+          label: "Compromisos",
+          valueCents: report.liabilities_cents,
+        }}
+      />
     </section>
   );
 }
