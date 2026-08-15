@@ -1,14 +1,14 @@
 # Solution Intent — Personal Finance
 
 > Status: Evolving
-> Last Review: 2026-08-10
+> Last Review: 2026-08-15
 
 ## 1. Identidad y objetivo
 
 | Campo | Valor |
 |---|---|
 | Producto | Personal Finance |
-| Estado | `spec-001` entregada y consolidada |
+| Estado | `spec-001` y `spec-002` entregadas y consolidadas |
 | Versión | 0.1.0 integrada en `main` |
 | Uso | Privado, doméstico y limitado a una LAN de confianza |
 | Host y clientes | Windows 10/11 x64 |
@@ -23,6 +23,8 @@ La primera entrega incluye borradores, contabilización, reversión,
 conciliación, informes básicos, autenticación local, auditoría, backup diario y
 restauración aislada. Tarjetas, préstamos, presupuestos, previsiones,
 subcategorías, multimoneda y colaboración avanzada quedan fuera de `spec-001`.
+`spec-002` refinó la presentación responsive y accesible de la actividad del
+periodo sin modificar contratos, cálculos ni semántica financiera.
 
 ## 2. Resultados y requisitos
 
@@ -182,14 +184,17 @@ IP, hostname, rutas, credenciales ni contenido financiero.
 | Spec/capacidad | Estado |
 |---|---|
 | `spec-001` núcleo financiero y operación Windows | `SHIPPED`, HITL confirmado |
+| `spec-002` rediseño visual de la actividad del periodo | `SHIPPED`, PR #4 |
 | Pasivos y periodicidad | Backlog |
 | Presupuesto y previsión | Backlog |
 | Varios usuarios y espacios compartidos | Backlog |
 | Copia externa y recuperación ante pérdida física | Backlog |
 
 `spec-001` se declaró `SHIPPED` después del squash merge del PR #2 con todos los
-checks —incluido `windows-deployment`— en verde y quedó archivada en el ledger
-de especificaciones.
+checks —incluido `windows-deployment`— en verde. `spec-002` se declaró
+`SHIPPED` después del squash merge del PR #4 con los cinco checks requeridos en
+verde. Ambas quedaron archivadas en el ledger de especificaciones y no existe
+una spec activa.
 
 | Riesgo | Severidad | Tratamiento |
 |---|---|---|

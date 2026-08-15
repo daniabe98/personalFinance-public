@@ -113,9 +113,11 @@ ai-eng verify
 
 ## Estado
 
-`spec-001` está `SHIPPED` y consolidada tras el squash merge del PR #2 con todos
-los checks requeridos en verde, incluido `windows-deployment`. La aceptación
-HITL doméstica se confirmó el 2026-08-10.
+`spec-001` y `spec-002` están `SHIPPED` y consolidadas. La entrega más reciente,
+el rediseño visual de la actividad del periodo, se integró mediante el squash
+merge del PR #4 con todos los checks requeridos en verde. No hay una
+especificación activa. La aceptación HITL doméstica de `spec-001` se confirmó
+el 2026-08-10.
 
 ## Licencia
 
