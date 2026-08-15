@@ -7,11 +7,13 @@ la misma red doméstica.
 
 ## Funcionalidad
 
-- saldo inicial, ingresos, gastos y transferencias;
+- saldo inicial, ingresos, gastos y transferencias con descripción rigurosa;
 - borradores, contabilización, reversión y conciliación;
-- saldos, patrimonio, devengo y tesorería;
+- saldos, patrimonio, devengo y tesorería con composiciones visuales;
+- detalle contextual de movimientos sin abandonar el informe;
+- revisión progresiva y catálogos de cuentas y categorías mediante tabs;
 - sesión local, control CSRF y auditoría saneada;
-- backup diario verificado y restauración aislada.
+- estado visual del backup diario verificado y restauración aislada.
 
 ## Arquitectura
 
@@ -113,10 +115,11 @@ ai-eng verify
 
 ## Estado
 
-`spec-001` y `spec-002` están `SHIPPED` y consolidadas. `spec-003` está en
-implementación: exige una descripción rigurosa para escrituras nuevas y
-renueva Resumen, Revisión, Organizar y Backup con patrones visuales accesibles.
-La aceptación HITL doméstica de `spec-001` se confirmó el 2026-08-10.
+`spec-001` y `spec-002` están `SHIPPED` y consolidadas. Esta entrega implementa
+y verifica `spec-003`: exige una descripción rigurosa para escrituras nuevas y
+renueva Resumen, Revisión, Organizar y Copia de seguridad con patrones visuales
+accesibles. La aceptación HITL doméstica de `spec-001` se confirmó el
+2026-08-10.
 
 ## Licencia
 

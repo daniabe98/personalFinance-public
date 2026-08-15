@@ -8,13 +8,19 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/
 
 ### Added
 
-- Los nuevos movimientos exigirán una descripción clara y el Resumen podrá
-  consultar su detalle sin abandonar el informe.
-- Se incorporan composiciones visuales para Dinero disponible, Patrimonio,
-  Revisión, Organizar y Copia de seguridad, conservando cifras exactas y
-  navegación accesible.
+- Los nuevos movimientos exigen una descripción de 1 a 500 caracteres; los
+  registros históricos sin texto continúan visibles como «Sin descripción».
+- Resumen y Revisión muestran la descripción real de cada movimiento, y
+  «Ver detalle» abre un diálogo accesible sin abandonar el informe.
+- Dinero disponible y Patrimonio incorporan micrográficos de composición que
+  acompañan a las cifras exactas sin convertirlas en una tendencia temporal.
+- Revisión anticipa los datos introducidos y actualiza automáticamente el
+  cálculo canónico al cambiar la cuenta, la fecha, el saldo o la selección.
+- Organizar separa Cuentas y Categorías en tabs accesibles de ancho completo, y
+  Copia de seguridad distribuye horizontalmente su estado, la próxima ejecución
+  y el detalle comprensible de cualquier fallo.
 - Se documenta la doctrina de persistencia que asigna cada dato a una única
-  fuente writable y define cómo reconstruir sus proyecciones.
+  fuente canónica editable y define cómo reconstruir sus proyecciones.
 
 - Ya está disponible la base de gobierno del proyecto mediante `ai-eng`, con
   controles de calidad, seguridad, trazabilidad y flujo de contribución.
@@ -36,9 +42,9 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/
 
 ### Changed
 
-- Las decisiones de diseño viven junto a su spec; su índice estructurado se
-  trata como una proyección reconstruible, mientras las aceptaciones de riesgo
-  conservan su lifecycle canónico en el registro JSON.
+- Las decisiones de diseño viven junto a su especificación; su índice
+  estructurado se puede reconstruir, mientras las aceptaciones de riesgo
+  conservan su ciclo de vida canónico en el registro correspondiente.
 
 - La actividad del periodo presenta ahora un resumen editorial responsive y
   movimientos con fechas localizadas, importes firmados y enlaces de detalle
@@ -61,5 +67,6 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/
 
 ### Fixed
 
-- Los snapshots archivados de la spec 002 reflejan ahora sus estados terminales
-  reales y las referencias a la doctrina de persistencia dejan de estar rotas.
+- Los documentos archivados de la spec 002 reflejan ahora sus estados
+  terminales reales y las referencias a la doctrina de persistencia dejan de
+  estar rotas.

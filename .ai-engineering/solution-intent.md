@@ -187,6 +187,7 @@ IP, hostname, rutas, credenciales ni contenido financiero.
 |---|---|
 | `spec-001` núcleo financiero y operación Windows | `SHIPPED`, HITL confirmado |
 | `spec-002` rediseño visual de la actividad del periodo | `SHIPPED`, PR #4 |
+| `spec-003` rigor descriptivo y flujos visuales | En implementación |
 | Pasivos y periodicidad | Backlog |
 | Presupuesto y previsión | Backlog |
 | Varios usuarios y espacios compartidos | Backlog |
@@ -195,8 +196,8 @@ IP, hostname, rutas, credenciales ni contenido financiero.
 `spec-001` se declaró `SHIPPED` después del squash merge del PR #2 con todos los
 checks —incluido `windows-deployment`— en verde. `spec-002` se declaró
 `SHIPPED` después del squash merge del PR #4 con los cinco checks requeridos en
-verde. Ambas quedaron archivadas en el ledger de especificaciones y no existe
-una spec activa.
+verde. Ambas quedaron archivadas en el ledger de especificaciones. `spec-003`
+es la spec activa mientras completa su flujo de entrega.
 
 | Riesgo | Severidad | Tratamiento |
 |---|---|---|
