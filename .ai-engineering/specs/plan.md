@@ -3,9 +3,9 @@ total: 46
 completed: 0
 spec: spec-003
 title: Rediseño visual y rigor de flujos del frontend
-status: approved
-pipeline: full
-phases: 8
+status: in-progress
+pipeline: autopilot
+phases: 9
 execution_route:
   version: 1
   spec: spec-003
@@ -413,7 +413,7 @@ su RED fallar por la razón esperada.
 
 - [ ] T-8.3 — Sincronizar checkout operacional por fast-forward
 - Agent: build
-- Files: `C:\Users\MSI\Documents\personalFinance-public` (nunca `%ProgramData%`)
+- Files: `<operational-checkout>` (nunca `%ProgramData%`)
 - Principles applied: §10.1 KISS, §10.6 SDD
 - Patch (deterministic): `git fetch origin main` y `git pull --ff-only origin main`; abortar ante divergencia/cambios locales.
 - Gate: checkout limpio y `HEAD == origin/main` del merge.
@@ -475,9 +475,7 @@ su RED fallar por la razón esperada.
   files, principios, patch/guidance, gate y dependencias; cada GREEN tiene RED
   previo y AC-003-01..08 están trazados.
 
-## Approval gate
+## Execution gate
 
-El plan permanece `draft`. `/ai-autopilot` no puede ejecutarlo hasta aprobación
-explícita del operador y transición del plan a `approved`.
-
-safe_next_command: `/ai-autopilot`
+El operador aprobó el plan y la ejecución mediante `/ai-autopilot` está en
+curso. Ante una interrupción, la reanudación segura es `/ai-autopilot --resume`.

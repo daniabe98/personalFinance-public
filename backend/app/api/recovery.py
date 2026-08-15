@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from app.api.dependencies import require_authenticated_principal
 from app.identity.application.service import AuthenticatedPrincipal
 from app.recovery.application.status import (
+    BackupFailureDetail,
     BackupState,
     BackupStatus,
     VerificationResult,
@@ -29,7 +30,8 @@ class BackupStatusResponse(BaseModel):
     last_valid_backup_date: date | None
     last_verification_failure_date: date | None
     verification_result: VerificationResult
-    domestic_date: date
+    failure_detail: BackupFailureDetail | None
+    next_expected_execution_date: date
     retention_count: int
 
 
@@ -49,7 +51,8 @@ def backup_status(request: Request, principal: Principal) -> BackupStatusRespons
         last_valid_backup_date=value.last_valid_backup_date,
         last_verification_failure_date=value.last_verification_failure_date,
         verification_result=value.verification_result,
-        domestic_date=value.domestic_date,
+        failure_detail=value.failure_detail,
+        next_expected_execution_date=value.next_expected_execution_date,
         retention_count=value.retention_count,
     )
 

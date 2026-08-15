@@ -91,6 +91,24 @@ describe("checked API contract", () => {
     });
   });
 
+  it("publishes server-projected backup scheduling and a closed failure detail", () => {
+    const backup = openapi.components.schemas.BackupStatusResponse;
+
+    expect(backup.required).toEqual(
+      expect.arrayContaining([
+        "failure_detail",
+        "next_expected_execution_date",
+      ]),
+    );
+    expect(backup.properties).not.toHaveProperty("domestic_date");
+    expect(backup.properties.failure_detail).toMatchObject({
+      anyOf: expect.arrayContaining([
+        { $ref: "#/components/schemas/BackupFailureDetail" },
+        { type: "null" },
+      ]),
+    });
+  });
+
   it.each([
     ["0", 0],
     ["12", 1_200],

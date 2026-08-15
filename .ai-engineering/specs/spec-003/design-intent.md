@@ -170,4 +170,3 @@ tema claro que el producto declara con `color-scheme: light`.
 - [x] Listas >50/virtualización marcada N/A para el volumen actual; no se elimina la paginación existente.
 - [x] Divisores, foco e interacción se verifican sobre todos los fondos del único tema soportado.
 - [x] Los micrográficos son redundantes con cifras/leyendas y no cambian semántica financiera.
-

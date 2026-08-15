@@ -161,7 +161,7 @@ def _compose_services(settings: Settings) -> dict[str, object]:
         "audit_query_service": AuditQueryService(unit_of_work_factory, SqlAlchemyAuditRepository),
         "backup_status_query": BackupStatusQuery(
             SqlAlchemyBackupStatusReader(unit_of_work_factory),
-            domestic_date=datetime.now(ZoneInfo(settings.domestic_timezone)).date(),
+            today=lambda: datetime.now(ZoneInfo(settings.domestic_timezone)).date(),
             retention_count=settings.backup_retention,
         ),
     }

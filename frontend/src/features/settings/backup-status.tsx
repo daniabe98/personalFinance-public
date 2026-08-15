@@ -1,12 +1,14 @@
 type BackupState = "NEVER_RUN" | "PENDING" | "VERIFIED" | "FAILED";
 type VerificationResult = "NOT_AVAILABLE" | "PENDING" | "PASSED" | "FAILED";
+type BackupFailureDetail = "BACKUP_ATTEMPT_FAILED";
 
 export interface BackupStatusData {
   readonly state: BackupState;
   readonly last_valid_backup_date: string | null;
   readonly last_verification_failure_date: string | null;
   readonly verification_result: VerificationResult;
-  readonly domestic_date: string;
+  readonly failure_detail: BackupFailureDetail | null;
+  readonly next_expected_execution_date: string;
   readonly retention_count: number;
 }
 
@@ -50,12 +52,6 @@ const dateFormatter = new Intl.DateTimeFormat("es-ES", {
 
 function formatDate(value: string): string {
   return dateFormatter.format(new Date(`${value}T00:00:00Z`));
-}
-
-function tomorrow(value: string): string {
-  const date = new Date(`${value}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + 1);
-  return dateFormatter.format(date);
 }
 
 function retentionLabel(count: number): string {
@@ -168,13 +164,16 @@ export function BackupStatus({
         </div>
         <div className="backup-milestone">
           <dt>Próxima ejecución</dt>
-          <dd>{tomorrow(status.domestic_date)}</dd>
+          <dd>{formatDate(status.next_expected_execution_date)}</dd>
         </div>
       </dl>
-      {status.last_verification_failure_date ? (
+      {status.state === "FAILED" &&
+      status.last_verification_failure_date &&
+      status.failure_detail === "BACKUP_ATTEMPT_FAILED" ? (
         <p className="backup-failure" role="status">
           La verificación falló el{" "}
-          {formatDate(status.last_verification_failure_date)}.
+          {formatDate(status.last_verification_failure_date)}. La copia no pudo
+          completarse y verificarse.
         </p>
       ) : null}
       <a className="backup-runbook" href="/docs/runbooks/backup-restore">

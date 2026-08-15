@@ -5,6 +5,10 @@ Personal Finance utiliza un modelo **files-only**: cada dato durable tiene un
 reconstruirse desde esa fuente. Una proyección nunca se edita para cambiar la
 verdad que representa.
 
+Esta doctrina es documentación propiedad del proyecto: gobierna sus datos y el
+uso de las interfaces públicas de `ai-eng`, pero no redefine ni autoriza la
+edición de artefactos administrados por el framework.
+
 ## Tres niveles
 
 | Nivel | Propósito | Propiedades |
@@ -46,9 +50,11 @@ duplica su lifecycle.
 
 ## Reglas de escritura y recuperación
 
-1. Antes de escribir, identificar el dato y su fila en la tabla anterior.
-2. Escribir sólo en el almacén canónico; regenerar los derivados con el comando
-   indicado.
+1. Antes de escribir datos propiedad del proyecto, identificar el dato y su
+   fila en la tabla anterior.
+2. Escribir sólo en el almacén canónico del proyecto; para lifecycle, riesgos,
+   auditoría o índices del framework, usar exclusivamente la interfaz pública
+   indicada.
 3. Si un derivado discrepa, corregir la fuente o el generador, no ambas copias.
 4. Los logs NDJSON son evidencia append-only: no se usan como configuración ni
    se corrigen retrospectivamente.
@@ -71,5 +77,6 @@ duplica su lifecycle.
   `ai-eng decision expire-check` valida riesgos vigentes.
 - Los enlaces de esta doctrina deben resolver desde `AGENTS.md` y las demás
   superficies que la referencien.
-- Los artefactos vendorizados o marcados `generated-do-not-edit` se corrigen en
-  su fuente upstream; el proyecto sólo repara sus propios datos y snapshots.
+- Los artefactos vendorizados o marcados `generated-do-not-edit` no se modifican
+  desde el proyecto; cualquier defecto se comunica y corrige en su fuente
+  upstream.

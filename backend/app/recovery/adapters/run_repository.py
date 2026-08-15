@@ -27,6 +27,7 @@ class BackupStatusSnapshot:
     last_attempt_date: date | None
     last_attempt_status: BackupRunStatus | None
     verification_status: str
+    failure_detail: str | None
 
 
 class SqlAlchemyBackupRunRepository:
@@ -178,6 +179,9 @@ class SqlAlchemyBackupStatusReader:
                 last_attempt_date=None if attempt is None else attempt.backup_date,
                 last_attempt_status=attempt_status,
                 verification_status=verification,
+                failure_detail=(
+                    "BACKUP_ATTEMPT_FAILED" if attempt_status is BackupRunStatus.FAILED else None
+                ),
             )
 
 

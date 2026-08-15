@@ -13,6 +13,7 @@ const backupStates = [
     last_valid_backup_date: null,
     last_verification_failure_date: null,
     verification_result: "NOT_AVAILABLE",
+    failure_detail: null,
     title: "Sin ejecutar",
     explanation: "Todavía no se ha ejecutado ninguna copia de seguridad.",
     verification: "No disponible",
@@ -22,6 +23,7 @@ const backupStates = [
     last_valid_backup_date: "2026-07-20",
     last_verification_failure_date: null,
     verification_result: "PENDING",
+    failure_detail: null,
     title: "Pendiente de verificación",
     explanation: "La copia más reciente está esperando verificación.",
     verification: "Pendiente",
@@ -31,6 +33,7 @@ const backupStates = [
     last_valid_backup_date: "2026-07-20",
     last_verification_failure_date: null,
     verification_result: "PASSED",
+    failure_detail: null,
     title: "Copia verificada",
     explanation: "La copia más reciente se verificó correctamente.",
     verification: "Correcta",
@@ -40,6 +43,7 @@ const backupStates = [
     last_valid_backup_date: "2026-07-20",
     last_verification_failure_date: "2026-07-22",
     verification_result: "FAILED",
+    failure_detail: "BACKUP_ATTEMPT_FAILED",
     title: "Verificación fallida",
     explanation: "La copia más reciente no superó la verificación.",
     verification: "Fallida",
@@ -55,7 +59,8 @@ function settingsApi(): SettingsApi {
         last_valid_backup_date: "2026-07-20",
         last_verification_failure_date: "2026-07-22",
         verification_result: "FAILED",
-        domestic_date: "2026-07-23",
+        failure_detail: "BACKUP_ATTEMPT_FAILED",
+        next_expected_execution_date: "2026-07-24",
         retention_count: 14,
       },
     }),
@@ -111,7 +116,7 @@ describe("SettingsPage", () => {
     (stateCase) => {
       const status: BackupStatusData = {
         ...stateCase,
-        domestic_date: "2026-07-23",
+        next_expected_execution_date: "2026-07-24",
         retention_count: 14,
       };
       const { container } = render(<BackupStatus status={status} />);
@@ -154,6 +159,9 @@ describe("SettingsPage", () => {
 
     expect(await screen.findByText("20 de julio de 2026")).toBeVisible();
     expect(screen.getByText(/falló.*22 de julio de 2026/i)).toBeVisible();
+    expect(
+      screen.getByText(/no pudo completarse y verificarse/i),
+    ).toBeVisible();
     expect(screen.getByText("Fallida")).toBeVisible();
     expect(screen.getByText("14 copias")).toBeVisible();
     expect(screen.getByText(/24 de julio de 2026/)).toBeVisible();
@@ -185,7 +193,8 @@ describe("SettingsPage", () => {
           last_valid_backup_date: null,
           last_verification_failure_date: null,
           verification_result: "NOT_AVAILABLE",
-          domestic_date: "2026-07-23",
+          failure_detail: null,
+          next_expected_execution_date: "2026-07-24",
           retention_count: 0,
         },
       }),

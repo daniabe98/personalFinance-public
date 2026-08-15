@@ -159,6 +159,11 @@ describe("protected application shell", () => {
 
     expect(await screen.findByText("Nómina de junio")).toBeVisible();
     expect(screen.queryByText("Movimiento")).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/reconciliations/preview"),
+      expect.objectContaining({ method: "POST" }),
+    );
+    await user.click(screen.getByRole("checkbox", { name: /Nómina de junio/ }));
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/api/v1/reconciliations/preview"),
       expect.objectContaining({ method: "POST" }),

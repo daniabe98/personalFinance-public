@@ -2032,6 +2032,13 @@
         ],
         "title": "AuditPageResponse"
       },
+      "BackupFailureDetail": {
+        "type": "string",
+        "enum": [
+          "BACKUP_ATTEMPT_FAILED"
+        ],
+        "title": "BackupFailureDetail"
+      },
       "BackupState": {
         "type": "string",
         "enum": [
@@ -2074,10 +2081,20 @@
           "verification_result": {
             "$ref": "#/components/schemas/VerificationResult"
           },
-          "domestic_date": {
+          "failure_detail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BackupFailureDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_expected_execution_date": {
             "type": "string",
             "format": "date",
-            "title": "Domestic Date"
+            "title": "Next Expected Execution Date"
           },
           "retention_count": {
             "type": "integer",
@@ -2090,7 +2107,8 @@
           "last_valid_backup_date",
           "last_verification_failure_date",
           "verification_result",
-          "domestic_date",
+          "failure_detail",
+          "next_expected_execution_date",
           "retention_count"
         ],
         "title": "BackupStatusResponse"

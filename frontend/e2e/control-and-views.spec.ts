@@ -333,10 +333,16 @@ test("reverses, reconciles and reports exact cross-period effects on the real le
         response.url().endsWith("/api/v1/reconciliations/preview"),
     );
     await pending.getByRole("checkbox").nth(index).check();
-    await preview;
+    expect((await preview).ok()).toBe(true);
   }
   await expect(page.getByText("La diferencia es cero.")).toBeVisible();
+  const completion = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().endsWith("/api/v1/reconciliations"),
+  );
   await page.getByRole("button", { name: "Completar conciliación" }).click();
+  expect((await completion).ok()).toBe(true);
   await expect(page.getByRole("status")).toContainText(
     "Conciliación completada",
   );
