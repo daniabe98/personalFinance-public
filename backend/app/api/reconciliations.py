@@ -15,6 +15,7 @@ from app.api.dependencies import (
     require_unsafe_request_protection,
 )
 from app.identity.application.service import AuthenticatedPrincipal
+from app.ledger.domain.transaction import TransactionKind
 from app.reconciliation.application.service import ReconciliationResult
 from app.reconciliation.domain.reconciliation import ReconciliationCandidate
 
@@ -69,6 +70,8 @@ class ReconciliationRequest(BaseModel):
 class CandidateResponse(BaseModel):
     entry_id: str
     transaction_id: str
+    description: str | None
+    kind: TransactionKind
     eligibility_date: date
     effect_cents: int
     currency: str = "EUR"
@@ -99,6 +102,8 @@ def _candidate(value: ReconciliationCandidate) -> CandidateResponse:
     return CandidateResponse(
         entry_id=str(value.entry_id),
         transaction_id=str(value.transaction_id),
+        description=value.description,
+        kind=value.kind,
         eligibility_date=value.eligibility_date,
         effect_cents=int(value.signed_effect_cents),
     )

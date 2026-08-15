@@ -86,6 +86,7 @@ class SqlAlchemyReportingLedgerReader:
                 entry_id=entry.id,
                 transaction_id=transaction.id,
                 transaction_kind=transaction.kind,
+                description=transaction.description,
                 economic_date=transaction.economic_date,
                 cash_date=transaction.cash_date,
                 side=entry.side,

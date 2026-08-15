@@ -32,6 +32,7 @@ class ContributionResponse(BaseModel):
     amount_cents: int
     economic_date: date
     cash_date: date | None
+    description: str | None
     account_id: str | None = None
     category_id: str | None = None
     currency: str = "EUR"
@@ -82,6 +83,7 @@ def _contributions(
             amount_cents=item.amount_cents,
             economic_date=item.economic_date,
             cash_date=item.cash_date,
+            description=item.description,
             account_id=item.account_id,
             category_id=item.category_id,
         )

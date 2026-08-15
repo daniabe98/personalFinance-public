@@ -133,6 +133,7 @@ class ReportQueryService:
             amount_cents=amount_cents,
             economic_date=entry.economic_date,
             cash_date=entry.cash_date,
+            description=entry.description,
             account_id=entry.account_id,
             category_id=entry.category_id,
         )

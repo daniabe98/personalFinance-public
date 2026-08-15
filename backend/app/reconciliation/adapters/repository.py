@@ -102,6 +102,8 @@ class SqlAlchemyReconciliationRepository:
                 transaction_id=transaction.id,
                 space_id=entry.space_id,
                 account_id=account_id,
+                description=transaction.description,
+                kind=TransactionKind(transaction.kind),
                 eligibility_date=row_eligibility_date,
                 signed_effect_cents=(
                     entry.amount_cents
