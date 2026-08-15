@@ -8,7 +8,7 @@
 | Campo | Valor |
 |---|---|
 | Producto | Personal Finance |
-| Estado | `spec-001` y `spec-002` entregadas y consolidadas |
+| Estado | `spec-001` y `spec-002` entregadas; `spec-003` en implementación |
 | Versión | 0.1.0 integrada en `main` |
 | Uso | Privado, doméstico y limitado a una LAN de confianza |
 | Host y clientes | Windows 10/11 x64 |
@@ -24,7 +24,9 @@ conciliación, informes básicos, autenticación local, auditoría, backup diari
 restauración aislada. Tarjetas, préstamos, presupuestos, previsiones,
 subcategorías, multimoneda y colaboración avanzada quedan fuera de `spec-001`.
 `spec-002` refinó la presentación responsive y accesible de la actividad del
-periodo sin modificar contratos, cálculos ni semántica financiera.
+periodo. `spec-003` endurece prospectivamente la descripción de movimientos y
+rediseña Resumen, Revisión, Organizar y Backup sin modificar cálculos,
+clasificación contable ni evidencia histórica.
 
 ## 2. Resultados y requisitos
 
@@ -185,6 +187,7 @@ IP, hostname, rutas, credenciales ni contenido financiero.
 |---|---|
 | `spec-001` núcleo financiero y operación Windows | `SHIPPED`, HITL confirmado |
 | `spec-002` rediseño visual de la actividad del periodo | `SHIPPED`, PR #4 |
+| `spec-003` rigor descriptivo y flujos visuales | En implementación |
 | Pasivos y periodicidad | Backlog |
 | Presupuesto y previsión | Backlog |
 | Varios usuarios y espacios compartidos | Backlog |
@@ -193,8 +196,8 @@ IP, hostname, rutas, credenciales ni contenido financiero.
 `spec-001` se declaró `SHIPPED` después del squash merge del PR #2 con todos los
 checks —incluido `windows-deployment`— en verde. `spec-002` se declaró
 `SHIPPED` después del squash merge del PR #4 con los cinco checks requeridos en
-verde. Ambas quedaron archivadas en el ledger de especificaciones y no existe
-una spec activa.
+verde. Ambas quedaron archivadas en el ledger de especificaciones. `spec-003`
+es la spec activa mientras completa su flujo de entrega.
 
 | Riesgo | Severidad | Tratamiento |
 |---|---|---|

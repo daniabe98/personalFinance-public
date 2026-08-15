@@ -42,7 +42,7 @@ def test_failure_rolls_back_transaction_entries_and_idempotency(ledger_uow_facto
         500,
         date(2026, 7, 1),
         None,
-        None,
+        "Salary",
         "same-key",
     )
 
@@ -66,7 +66,7 @@ def test_failure_rolls_back_transaction_entries_and_idempotency(ledger_uow_facto
         501,
         date(2026, 7, 1),
         None,
-        None,
+        "Salary",
         "same-key",
     )
     with pytest.raises(IdempotencyConflictError):

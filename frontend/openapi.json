@@ -2032,6 +2032,13 @@
         ],
         "title": "AuditPageResponse"
       },
+      "BackupFailureDetail": {
+        "type": "string",
+        "enum": [
+          "BACKUP_ATTEMPT_FAILED"
+        ],
+        "title": "BackupFailureDetail"
+      },
       "BackupState": {
         "type": "string",
         "enum": [
@@ -2074,10 +2081,20 @@
           "verification_result": {
             "$ref": "#/components/schemas/VerificationResult"
           },
-          "domestic_date": {
+          "failure_detail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BackupFailureDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_expected_execution_date": {
             "type": "string",
             "format": "date",
-            "title": "Domestic Date"
+            "title": "Next Expected Execution Date"
           },
           "retention_count": {
             "type": "integer",
@@ -2090,7 +2107,8 @@
           "last_valid_backup_date",
           "last_verification_failure_date",
           "verification_result",
-          "domestic_date",
+          "failure_detail",
+          "next_expected_execution_date",
           "retention_count"
         ],
         "title": "BackupStatusResponse"
@@ -2104,6 +2122,20 @@
           "transaction_id": {
             "type": "string",
             "title": "Transaction Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TransactionKind"
           },
           "eligibility_date": {
             "type": "string",
@@ -2124,6 +2156,8 @@
         "required": [
           "entry_id",
           "transaction_id",
+          "description",
+          "kind",
           "eligibility_date",
           "effect_cents"
         ],
@@ -2221,15 +2255,9 @@
             "title": "Economic Date"
           },
           "description": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 500
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
             "title": "Description"
           },
           "category_id": {
@@ -2255,6 +2283,7 @@
           "account_id",
           "amount_cents",
           "economic_date",
+          "description",
           "category_id"
         ],
         "title": "CategoryMovementRequest"
@@ -2347,6 +2376,17 @@
             ],
             "title": "Cash Date"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "account_id": {
             "anyOf": [
               {
@@ -2380,7 +2420,8 @@
           "transaction_id",
           "amount_cents",
           "economic_date",
-          "cash_date"
+          "cash_date",
+          "description"
         ],
         "title": "ContributionResponse"
       },
@@ -2395,15 +2436,9 @@
             "title": "Economic Date"
           },
           "description": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 500
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
             "title": "Description"
           },
           "amount_cents": {
@@ -2461,6 +2496,7 @@
         "required": [
           "kind",
           "economic_date",
+          "description",
           "amount_cents"
         ],
         "title": "DraftRequest"
@@ -2607,15 +2643,9 @@
             "title": "Economic Date"
           },
           "description": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 500
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
             "title": "Description"
           }
         },
@@ -2624,7 +2654,8 @@
         "required": [
           "account_id",
           "amount_cents",
-          "economic_date"
+          "economic_date",
+          "description"
         ],
         "title": "OpeningRequest"
       },
@@ -2788,18 +2819,6 @@
               }
             ],
             "title": "Cash Date"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 500
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
           }
         },
         "additionalProperties": false,
@@ -3004,15 +3023,9 @@
             "title": "Cash Date"
           },
           "description": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 500
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
             "title": "Description"
           }
         },
@@ -3022,7 +3035,8 @@
           "source_account_id",
           "destination_account_id",
           "amount_cents",
-          "economic_date"
+          "economic_date",
+          "description"
         ],
         "title": "TransferRequest"
       },

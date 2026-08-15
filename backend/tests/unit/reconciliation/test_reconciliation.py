@@ -51,6 +51,7 @@ def _posted_transaction(
     account_id: str = ACCOUNT_ID,
     side: EntrySide = EntrySide.DEBIT,
     entry_id: str | None = None,
+    description: str | None = "Test movement",
 ) -> tuple[Transaction, Entry]:
     financial = Entry.for_account(
         entry_id or f"{transaction_id}-financial",
@@ -72,7 +73,7 @@ def _posted_transaction(
         kind,
         economic_date,
         cash_date,
-        None,
+        description,
         (financial, balancing),
     )
     return transaction, financial
@@ -94,6 +95,8 @@ def test_candidate_accepts_visible_reconcilable_financial_accounts(
     assert candidate.entry_id == entry.id
     assert candidate.eligibility_date == date(2026, 7, 3)
     assert candidate.signed_effect_cents == 100_000
+    assert candidate.description == "Test movement"
+    assert candidate.kind is TransactionKind.INCOME
 
 
 @pytest.mark.parametrize(
@@ -137,11 +140,14 @@ def test_opening_uses_economic_date_for_cutoff() -> None:
         kind=TransactionKind.OPENING,
         economic_date=CUTOFF,
         cash_date=None,
+        description=None,
     )
 
     candidate = ReconciliationCandidate.from_ledger(_account(), transaction, entry)
 
     assert candidate.eligibility_date == CUTOFF
+    assert candidate.description is None
+    assert candidate.kind is TransactionKind.OPENING
     assert candidate.is_eligible(CUTOFF)
     assert not candidate.is_eligible(date(2026, 7, 30))
 

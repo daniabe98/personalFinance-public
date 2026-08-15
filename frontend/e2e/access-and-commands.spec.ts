@@ -19,7 +19,13 @@ async function createAccount(
   });
   await form.getByLabel("Nombre").fill(name);
   await form.getByLabel("Tipo").selectOption({ label: type });
+  const createResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().endsWith("/api/v1/accounts"),
+  );
   await form.getByRole("button", { name: "Crear cuenta" }).click();
+  expect((await createResponse).ok()).toBe(true);
   await expect(
     page.getByRole("listitem").filter({ hasText: name }),
   ).toBeVisible();
@@ -35,7 +41,13 @@ async function createCategory(
   });
   await form.getByLabel("Nombre").fill(name);
   await form.getByLabel("Uso").selectOption({ label: use });
+  const createResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().endsWith("/api/v1/categories"),
+  );
   await form.getByRole("button", { name: "Crear categoría" }).click();
+  expect((await createResponse).ok()).toBe(true);
   await expect(
     page.getByRole("listitem").filter({ hasText: name }),
   ).toBeVisible();
@@ -75,7 +87,7 @@ async function prepareMovement(page: Page, movement: Movement): Promise<void> {
       .selectOption({ label: movement.destination });
   }
   await page.getByLabel("Fecha del movimiento").fill(movement.date);
-  await page.getByLabel("Descripción (opcional)").fill(movement.description);
+  await page.getByLabel("Descripción").fill(movement.description);
   await page.getByRole("button", { name: "Revisar movimiento" }).click();
   await expect(
     page.getByRole("heading", { name: "Revisa antes de guardar" }),
@@ -84,7 +96,13 @@ async function prepareMovement(page: Page, movement: Movement): Promise<void> {
 
 async function postMovement(page: Page, movement: Movement): Promise<void> {
   await prepareMovement(page, movement);
+  const postResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/api/v1/transactions/"),
+  );
   await page.getByRole("button", { name: "Contabilizar" }).click();
+  expect((await postResponse).ok()).toBe(true);
   await expect(
     page.getByRole("listitem").filter({ hasText: movement.description }),
   ).toBeVisible();
@@ -125,8 +143,12 @@ test("executes catalog and core financial commands against the packaged HTTPS ap
   await createAccount(page, "Cuenta diaria E2E");
   await createAccount(page, "Ahorro E2E");
   await createAccount(page, "Tarjeta E2E", "Deudas");
+  const categoriesTab = page.getByRole("tab", { name: "Categorías" });
+  await categoriesTab.click();
+  await expect(categoriesTab).toHaveAttribute("aria-selected", "true");
   await createCategory(page, "Nómina E2E", "Ingresos");
   await createCategory(page, "Comida E2E", "Gastos");
+  await page.getByRole("tab", { name: "Cuentas" }).click();
 
   const dailyAccount = page
     .getByRole("listitem")
@@ -137,6 +159,11 @@ test("executes catalog and core financial commands against the packaged HTTPS ap
   ).toContainText("Deudas");
 
   await page.getByRole("link", { name: "Movimientos" }).click();
+  await expect(page.getByLabel("Descripción")).toHaveAttribute("required", "");
+  await expect(page.getByLabel("Descripción")).toHaveAttribute(
+    "maxlength",
+    "500",
+  );
   await postMovement(page, {
     action: "Indicar saldo inicial",
     amount: "1.000,00",
@@ -166,16 +193,25 @@ test("executes catalog and core financial commands against the packaged HTTPS ap
       request.method() === "POST" &&
       request.url().endsWith("/api/v1/transactions/transfer"),
   );
+  const transferResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().endsWith("/api/v1/transactions/transfer"),
+  );
   await prepareMovement(page, {
     action: "Mover dinero",
     amount: "100,00",
     account: "Cuenta diaria E2E",
     destination: "Ahorro E2E",
     date: DATES.transfer,
-    description: "Transferencia E2E",
+    description: "  Transferencia E2E  ",
   });
   await page.getByRole("button", { name: "Contabilizar" }).click();
   const capturedTransfer = await transferRequest;
+  expect((await transferResponse).ok()).toBe(true);
+  expect(capturedTransfer.postDataJSON()).toMatchObject({
+    description: "Transferencia E2E",
+  });
   await expect(
     page.getByRole("listitem").filter({ hasText: "Transferencia E2E" }),
   ).toHaveCount(1);
@@ -207,17 +243,31 @@ test("executes catalog and core financial commands against the packaged HTTPS ap
   await expect(worth).toContainText(/Activos\s*1\.200,00 €/);
 
   await page.getByRole("link", { name: "Organizar" }).click();
+  await page.getByRole("tab", { name: "Categorías" }).click();
   const expenseCategory = page
     .getByRole("listitem")
     .filter({ hasText: "Comida E2E" });
   page.once("dialog", (dialog) => dialog.accept("Comida hogar E2E"));
+  const renameResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.url().includes("/api/v1/categories/"),
+  );
   await expenseCategory.getByRole("button", { name: "Renombrar" }).click();
+  expect((await renameResponse).ok()).toBe(true);
   const renamedCategory = page
     .getByRole("listitem")
     .filter({ hasText: "Comida hogar E2E" });
   await expect(renamedCategory).toBeVisible();
   page.once("dialog", (dialog) => dialog.accept());
+  const archiveResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().endsWith("/archive") &&
+      response.url().includes("/api/v1/categories/"),
+  );
   await renamedCategory.getByRole("button", { name: "Archivar" }).click();
+  expect((await archiveResponse).ok()).toBe(true);
   await expect(renamedCategory).toHaveCount(0);
   await page.getByRole("button", { name: "Archivadas" }).click();
   await expect(

@@ -33,7 +33,7 @@ export function AccountForm({
       className="surface-solid compact-form"
       onSubmit={(event) => void submit(event)}
     >
-      <h3>Nueva cuenta</h3>
+      <h2>Nueva cuenta</h2>
       {error === null ? null : <ErrorMessage>{error}</ErrorMessage>}
       <div className="field">
         <label htmlFor="account-name">Nombre</label>
@@ -91,7 +91,7 @@ export function CategoryForm({
       className="surface-solid compact-form"
       onSubmit={(event) => void submit(event)}
     >
-      <h3>Nueva categoría</h3>
+      <h2>Nueva categoría</h2>
       {error === null ? null : <ErrorMessage>{error}</ErrorMessage>}
       <div className="field">
         <label htmlFor="category-name">Nombre</label>

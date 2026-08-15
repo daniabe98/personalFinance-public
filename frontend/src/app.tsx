@@ -1,17 +1,22 @@
 import { useMemo } from "react";
 import { RouterProvider } from "react-router-dom";
 
-import { createApiClient, type ApiClient, type ApiResult } from "./api/client";
-import { createAuthApi, type AuthApi } from "./features/auth/api";
+import { type ApiClient, type ApiResult, createApiClient } from "./api/client";
+import { type AuthApi, createAuthApi } from "./features/auth/api";
 import {
-  ReconciliationPage,
   type ReconciliationAccount,
   type ReconciliationApi,
+  ReconciliationPage,
 } from "./features/reconciliation/page";
-import { ReportsSummary, type ReportsApi } from "./features/reports/summary";
-import { SettingsPage, type SettingsApi } from "./features/settings/page";
+import type { ReconciliationCandidate } from "./features/reconciliation/entry-list";
+import type {
+  DetailCatalogItem,
+  MovementDetail,
+} from "./features/reports/movement-detail-dialog";
+import { type ReportsApi, ReportsSummary } from "./features/reports/summary";
+import { type SettingsApi, SettingsPage } from "./features/settings/page";
 import { createIdempotencyKey } from "./lib/idempotency-key";
-import { createAppRouter, type ControlRoutePages } from "./router";
+import { type ControlRoutePages, createAppRouter } from "./router";
 
 type ViewResult<T> =
   | { readonly ok: true; readonly data: T }
@@ -36,22 +41,11 @@ function reconciliationApi(client: ApiClient): ReconciliationApi {
       const path =
         `/api/v1/reconciliations/candidates?account_id=${encodeURIComponent(accountId)}` +
         `&cutoff_date=${encodeURIComponent(cutoffDate)}`;
-      const result = await client.request<
-        readonly {
-          readonly entry_id: string;
-          readonly eligibility_date: string;
-          readonly effect_cents: number;
-        }[]
-      >(path as `/api/v1/${string}`);
-      if (!result.ok) return viewResult(result);
-      return {
-        ok: true,
-        data: result.data.map((item) => ({
-          ...item,
-          description: "Movimiento",
-          kind: "MOVEMENT",
-        })),
-      };
+      return viewResult(
+        await client.request<readonly ReconciliationCandidate[]>(
+          path as `/api/v1/${string}`,
+        ),
+      );
     },
     async preview(request) {
       return viewResult(
@@ -93,6 +87,29 @@ function reportsApi(client: ApiClient): ReportsApi {
       return viewResult(
         await client.request(
           `/api/v1/reports/net-worth?as_of=${encodeURIComponent(asOf)}`,
+        ),
+      );
+    },
+    async transaction(transactionId) {
+      const result = await client.request<MovementDetail>(
+        `/api/v1/transactions/${encodeURIComponent(transactionId)}`,
+      );
+      if (!result.ok && result.error.status === 404) {
+        return { ok: true, data: null };
+      }
+      return viewResult<MovementDetail | null>(result);
+    },
+    async accounts() {
+      return viewResult(
+        await client.request<readonly DetailCatalogItem[]>(
+          "/api/v1/accounts?include_archived=true",
+        ),
+      );
+    },
+    async categories() {
+      return viewResult(
+        await client.request<readonly DetailCatalogItem[]>(
+          "/api/v1/categories?include_archived=true",
         ),
       );
     },

@@ -43,19 +43,19 @@ function formatSignedEurCents(amountCents: number): string {
 }
 
 function getContributionPresentation(amountCents: number): {
-  readonly label: "Movimiento" | "Sin impacto";
   readonly modifier: "movement" | "neutral";
 } {
   if (amountCents === 0) {
-    return { label: "Sin impacto", modifier: "neutral" };
+    return { modifier: "neutral" };
   }
-  return { label: "Movimiento", modifier: "movement" };
+  return { modifier: "movement" };
 }
 
 export interface Contribution {
   readonly transaction_id: string;
   readonly amount_cents: number;
   readonly economic_date: string;
+  readonly description: string | null;
 }
 
 export interface EconomicReport {
@@ -67,8 +67,13 @@ export interface EconomicReport {
 
 export function EconomicReportView({
   report,
+  onViewDetail,
 }: {
   readonly report: EconomicReport;
+  readonly onViewDetail?: (
+    transactionId: string,
+    opener: HTMLButtonElement,
+  ) => void;
 }): React.JSX.Element {
   const empty =
     report.income_cents === 0 &&
@@ -98,6 +103,7 @@ export function EconomicReportView({
           const date = formatEconomicDate(item.economic_date);
           const signedAmount = formatSignedEurCents(item.amount_cents);
           const presentation = getContributionPresentation(item.amount_cents);
+          const description = item.description ?? "Sin descripción";
 
           return (
             <li
@@ -108,20 +114,24 @@ export function EconomicReportView({
                 <time className="activity-date" dateTime={item.economic_date}>
                   {date}
                 </time>
-                <span
-                  className={`activity-type activity-type--${presentation.modifier}`}
-                >
-                  {presentation.label}
-                </span>
+                <strong className="activity-description">{description}</strong>
+                {item.amount_cents === 0 ? (
+                  <span className="activity-type activity-type--neutral">
+                    Sin impacto
+                  </span>
+                ) : null}
               </div>
               <span className="activity-amount money">{signedAmount}</span>
-              <a
+              <button
+                type="button"
                 className="activity-action"
-                href={`/movimientos?transaccion=${encodeURIComponent(item.transaction_id)}`}
-                aria-label={`Ver detalle de ${presentation.label}, ${signedAmount}, ${date}, ${index + 1} de ${report.contributions.length}`}
+                aria-label={`Ver detalle de ${description}, ${signedAmount}, ${date}, ${index + 1} de ${report.contributions.length}`}
+                onClick={(event) =>
+                  onViewDetail?.(item.transaction_id, event.currentTarget)
+                }
               >
                 Ver detalle
-              </a>
+              </button>
             </li>
           );
         })}

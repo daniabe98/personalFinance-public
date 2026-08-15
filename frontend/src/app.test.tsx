@@ -102,6 +102,75 @@ describe("protected application shell", () => {
     vi.restoreAllMocks();
   });
 
+  it("preserves server candidate descriptions in the browser reconciliation API", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "/conciliar");
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const path = String(input);
+        if (path.includes("/auth/session")) {
+          return Response.json({
+            user_id: "u",
+            space_id: "s",
+            username: "owner",
+            csrf_token: "csrf",
+          });
+        }
+        if (path.includes("/reconciliations/candidates")) {
+          return Response.json([
+            {
+              entry_id: "entry-income",
+              eligibility_date: "2026-06-17",
+              effect_cents: 50_000,
+              description: "Nómina de junio",
+              kind: "INCOME",
+            },
+          ]);
+        }
+        if (path.endsWith("/reconciliations/preview")) {
+          // This test owns the request body emitted by the typed browser client.
+          const body = JSON.parse(String(init?.body)) as {
+            readonly selected_entry_ids: readonly string[];
+          };
+          return Response.json({
+            actual_balance_cents: 150_000,
+            checked_balance_cents: body.selected_entry_ids.length
+              ? 150_000
+              : 100_000,
+            difference_cents: body.selected_entry_ids.length ? 0 : 50_000,
+            currency: "EUR",
+          });
+        }
+        return Response.json([
+          {
+            id: "account-current",
+            name: "Cuenta corriente",
+            is_reconcilable: true,
+            is_archived: false,
+          },
+        ]);
+      });
+
+    render(<App />);
+    await screen.findByRole("heading", { name: "Conciliar" });
+    await user.type(screen.getByLabelText("Fecha de corte"), "2026-06-30");
+    await user.type(screen.getByLabelText("Saldo real"), "1500,00");
+
+    expect(await screen.findByText("Nómina de junio")).toBeVisible();
+    expect(screen.queryByText("Movimiento")).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/reconciliations/preview"),
+      expect.objectContaining({ method: "POST" }),
+    );
+    await user.click(screen.getByRole("checkbox", { name: /Nómina de junio/ }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/reconciliations/preview"),
+      expect.objectContaining({ method: "POST" }),
+    );
+    vi.restoreAllMocks();
+  });
+
   it("exposes five labelled destinations and injectable control pages", async () => {
     const user = userEvent.setup();
     const router = createAppRouter({

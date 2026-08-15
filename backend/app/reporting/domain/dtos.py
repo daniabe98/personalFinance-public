@@ -31,6 +31,7 @@ class ReportContribution:
     amount_cents: int
     economic_date: date
     cash_date: date | None
+    description: str | None
     account_id: str | None = None
     category_id: str | None = None
     currency: str = "EUR"

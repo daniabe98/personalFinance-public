@@ -9,7 +9,7 @@ import { isRecord, type Validator } from "../../api/validation";
 export interface MovementInput {
   readonly kind: TransactionKind;
   readonly economic_date: string;
-  readonly description: string | null;
+  readonly description: string;
   readonly amount_cents: number;
   readonly account_id?: string;
   readonly category_id?: string;
@@ -36,7 +36,6 @@ export interface TransactionsApi {
     input: {
       readonly economic_date: string;
       readonly cash_date: string | null;
-      readonly description: string | null;
     },
     key: string,
   ): Promise<ApiResult<CommandResponse>>;

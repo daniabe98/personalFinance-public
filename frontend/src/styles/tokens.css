@@ -17,6 +17,7 @@
   --color-danger: #983b36;
   --shadow-glass: 0 18px 48px rgba(21, 72, 137, 0.14);
   --radius-plane: 14px;
+  --motion-feedback: 180ms;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 16px;

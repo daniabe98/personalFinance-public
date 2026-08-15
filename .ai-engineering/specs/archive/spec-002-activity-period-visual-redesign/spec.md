@@ -2,7 +2,7 @@
 spec: spec-002
 slug: activity-period-visual-redesign
 title: Rediseño visual de actividad del periodo
-status: in-progress
+status: done
 effort: small
 summary: "Rediseña la actividad económica como un libro contable editorial, responsive y accesible, conservando intactos los datos, el orden y la navegación del informe."
 refs: []

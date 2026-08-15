@@ -46,6 +46,69 @@ describe("checked API contract", () => {
     ).toBe(true);
   });
 
+  it("requires normalized descriptions for writes and keeps reads nullable", () => {
+    const writeSchemas = [
+      openapi.components.schemas.DraftRequest,
+      openapi.components.schemas.OpeningRequest,
+      openapi.components.schemas.CategoryMovementRequest,
+      openapi.components.schemas.TransferRequest,
+    ];
+
+    for (const schema of writeSchemas) {
+      expect(schema.required).toContain("description");
+      expect(schema.properties.description).toMatchObject({
+        type: "string",
+        minLength: 1,
+        maxLength: 500,
+      });
+    }
+    expect(
+      openapi.components.schemas.ReversalRequest.properties,
+    ).not.toHaveProperty("description");
+    expect(
+      openapi.components.schemas.TransactionResponse.properties.description,
+    ).toMatchObject({
+      anyOf: expect.arrayContaining([{ type: "string" }, { type: "null" }]),
+    });
+  });
+
+  it("publishes enriched report contributions and reconciliation candidates", () => {
+    const contribution = openapi.components.schemas.ContributionResponse;
+    expect(contribution.required).toContain("description");
+    expect(contribution.properties.description).toMatchObject({
+      anyOf: expect.arrayContaining([{ type: "string" }, { type: "null" }]),
+    });
+
+    const candidate = openapi.components.schemas.CandidateResponse;
+    expect(candidate.required).toEqual(
+      expect.arrayContaining(["description", "kind"]),
+    );
+    expect(candidate.properties.description).toMatchObject({
+      anyOf: expect.arrayContaining([{ type: "string" }, { type: "null" }]),
+    });
+    expect(candidate.properties.kind).toMatchObject({
+      $ref: "#/components/schemas/TransactionKind",
+    });
+  });
+
+  it("publishes server-projected backup scheduling and a closed failure detail", () => {
+    const backup = openapi.components.schemas.BackupStatusResponse;
+
+    expect(backup.required).toEqual(
+      expect.arrayContaining([
+        "failure_detail",
+        "next_expected_execution_date",
+      ]),
+    );
+    expect(backup.properties).not.toHaveProperty("domestic_date");
+    expect(backup.properties.failure_detail).toMatchObject({
+      anyOf: expect.arrayContaining([
+        { $ref: "#/components/schemas/BackupFailureDetail" },
+        { type: "null" },
+      ]),
+    });
+  });
+
   it.each([
     ["0", 0],
     ["12", 1_200],

@@ -13,6 +13,7 @@ class ReportingEntry:
     entry_id: str
     transaction_id: str
     transaction_kind: str
+    description: str | None
     economic_date: date
     cash_date: date | None
     side: str

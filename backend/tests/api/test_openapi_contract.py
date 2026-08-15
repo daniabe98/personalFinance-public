@@ -85,3 +85,25 @@ def test_transaction_response_exposes_safe_read_details_without_entries() -> Non
     for identifier in ("account_id", "category_id", "destination_account_id"):
         assert {"type": "string"} in properties[identifier]["anyOf"]
     assert "entries" not in properties
+
+
+def test_openapi_requires_bounded_descriptions_for_writes_but_keeps_reads_nullable() -> None:
+    schema = create_app(readiness_probe=lambda: True).openapi()
+    components = schema["components"]["schemas"]
+
+    for model_name in (
+        "DraftRequest",
+        "OpeningRequest",
+        "CategoryMovementRequest",
+        "TransferRequest",
+    ):
+        model = components[model_name]
+        description = model["properties"]["description"]
+        assert "description" in model["required"]
+        assert description["minLength"] == 1
+        assert description["maxLength"] == 500
+
+    read_description = components["TransactionResponse"]["properties"]["description"]
+    assert {"type": "string"} in read_description["anyOf"]
+    assert {"type": "null"} in read_description["anyOf"]
+    assert "description" not in components["ReversalRequest"]["properties"]

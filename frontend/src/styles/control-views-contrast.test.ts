@@ -103,4 +103,25 @@ describe("control view glass contracts", () => {
     );
     expect(["glass-plane", "glass-strong"]).toHaveLength(2);
   });
+
+  it("scopes the editorial modal, chart, review, tabs, and backup surfaces", () => {
+    for (const selector of [
+      "movement-detail-dialog",
+      "composition-chart",
+      "movement-summary",
+      "catalog-tabs",
+      "backup-surface",
+    ]) {
+      expect(globalCss).toContain(`.${selector}`);
+    }
+    expect(globalCss).toMatch(
+      /\.backup-milestones\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/,
+    );
+    expect(globalCss).toMatch(
+      /@media \(min-width:\s*48rem\)[\s\S]*\.backup-milestones\s*\{[\s\S]*repeat\(2,\s*minmax\(0,\s*1fr\)\)/,
+    );
+    expect(globalCss).toMatch(
+      /@media \(min-width:\s*64rem\)[\s\S]*\.backup-milestones\s*\{[\s\S]*repeat\(4,\s*minmax\(0,\s*1fr\)\)/,
+    );
+  });
 });

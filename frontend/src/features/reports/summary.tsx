@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { CashReportView, type CashReport } from "./cash";
-import { EconomicReportView, type EconomicReport } from "./economic";
-import { NetWorthReportView, type NetWorthReport } from "./net-worth";
+import { type CashReport, CashReportView } from "./cash";
+import { type EconomicReport, EconomicReportView } from "./economic";
+import {
+  type MovementDetailApi,
+  MovementDetailDialog,
+} from "./movement-detail-dialog";
+import { type NetWorthReport, NetWorthReportView } from "./net-worth";
 
 type Result<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly message: string };
 
-export interface ReportsApi {
+export interface ReportsApi extends MovementDetailApi {
   economic(start: string, end: string): Promise<Result<EconomicReport>>;
   cash(start: string, end: string): Promise<Result<CashReport>>;
   netWorth(asOf: string): Promise<Result<NetWorthReport>>;
@@ -32,6 +36,16 @@ export function ReportsSummary({
   const [cash, setCash] = useState<CashReport>();
   const [worth, setWorth] = useState<NetWorthReport>();
   const [error, setError] = useState(false);
+  const [activeDetail, setActiveDetail] = useState<{
+    readonly transactionId: string;
+    readonly opener: HTMLButtonElement;
+  }>();
+
+  const closeDetail = useCallback((): void => {
+    const opener = activeDetail?.opener;
+    setActiveDetail(undefined);
+    queueMicrotask(() => opener?.focus());
+  }, [activeDetail]);
 
   const load = useCallback(
     async (from: string, to: string): Promise<void> => {
@@ -90,10 +104,24 @@ export function ReportsSummary({
       </form>
       {error ? <p role="alert">No se pudieron cargar los informes.</p> : null}
       <div className="reports-grid" aria-live="polite">
-        {economic ? <EconomicReportView report={economic} /> : null}
+        {economic ? (
+          <EconomicReportView
+            report={economic}
+            onViewDetail={(transactionId, opener) =>
+              setActiveDetail({ transactionId, opener })
+            }
+          />
+        ) : null}
         {cash ? <CashReportView report={cash} /> : null}
         {worth ? <NetWorthReportView report={worth} /> : null}
       </div>
+      {activeDetail ? (
+        <MovementDetailDialog
+          transactionId={activeDetail.transactionId}
+          api={api}
+          onClose={closeDetail}
+        />
+      ) : null}
     </>
   );
 }

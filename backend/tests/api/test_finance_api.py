@@ -120,9 +120,95 @@ def test_money_rejects_non_integer_cents() -> None:
             "account_id": "account-1",
             "amount_cents": True,
             "economic_date": "2026-07-23",
+            "description": "Opening balance",
         },
         headers=headers,
     )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_request"
+
+
+@pytest.mark.parametrize(
+    "description_payload",
+    [
+        {},
+        {"description": None},
+        {"description": ""},
+        {"description": "   "},
+        {"description": "x" * 501},
+    ],
+)
+@pytest.mark.parametrize(
+    ("path", "payload"),
+    [
+        (
+            "/api/v1/transactions/opening",
+            {
+                "account_id": "account-1",
+                "amount_cents": 100,
+                "economic_date": "2026-07-23",
+            },
+        ),
+        (
+            "/api/v1/transactions/income",
+            {
+                "account_id": "account-1",
+                "category_id": "category-1",
+                "amount_cents": 100,
+                "economic_date": "2026-07-23",
+            },
+        ),
+        (
+            "/api/v1/transactions/expense",
+            {
+                "account_id": "account-1",
+                "category_id": "category-1",
+                "amount_cents": 100,
+                "economic_date": "2026-07-23",
+            },
+        ),
+        (
+            "/api/v1/transactions/transfer",
+            {
+                "source_account_id": "account-1",
+                "destination_account_id": "account-2",
+                "amount_cents": 100,
+                "economic_date": "2026-07-23",
+            },
+        ),
+        (
+            "/api/v1/transactions/drafts",
+            {
+                "kind": "INCOME",
+                "account_id": "account-1",
+                "category_id": "category-1",
+                "amount_cents": 100,
+                "economic_date": "2026-07-23",
+            },
+        ),
+    ],
+)
+def test_transaction_writes_reject_invalid_description(
+    path: str,
+    payload: dict[str, object],
+    description_payload: dict[str, object],
+) -> None:
+    client = TestClient(
+        create_app(
+            readiness_probe=lambda: True,
+            session_manager=SessionStub(),
+            allowed_origin=ORIGIN,
+        )
+    )
+    client.cookies.set(COOKIE, "session-token")
+    headers = {
+        "Origin": ORIGIN,
+        "X-CSRF-Token": "csrf-token",
+        "Idempotency-Key": "invalid-description",
+    }
+
+    response = client.post(path, json={**payload, **description_payload}, headers=headers)
 
     assert response.status_code == 422
     assert response.json()["code"] == "invalid_request"
@@ -157,6 +243,7 @@ def test_composition_uses_real_services_and_durable_audit(
             "account_id": account.json()["id"],
             "amount_cents": 100_00,
             "economic_date": "2026-07-23",
+            "description": "  Initial balance  ",
         },
         headers={**headers, "Idempotency-Key": "opening-real-1"},
     )
@@ -177,6 +264,7 @@ def test_composition_uses_real_services_and_durable_audit(
             "category_id": category.json()["id"],
             "amount_cents": 250_00,
             "economic_date": "2026-07-23",
+            "description": "  Salary  ",
         },
         headers={**headers, "Idempotency-Key": "income-real-1"},
     )
@@ -187,6 +275,7 @@ def test_composition_uses_real_services_and_durable_audit(
             "destination_account_id": second_account.json()["id"],
             "amount_cents": 50_00,
             "economic_date": "2026-07-23",
+            "description": "  Move to savings  ",
         },
         headers={**headers, "Idempotency-Key": "transfer-real-1"},
     )
@@ -218,6 +307,7 @@ def test_composition_uses_real_services_and_durable_audit(
     by_kind = {transaction["kind"]: transaction for transaction in history.json()}
     assert by_kind["OPENING"] == {
         **by_kind["OPENING"],
+        "description": "Initial balance",
         "amount_cents": 100_00,
         "account_id": account.json()["id"],
         "category_id": None,
@@ -225,6 +315,7 @@ def test_composition_uses_real_services_and_durable_audit(
     }
     assert by_kind["INCOME"] == {
         **by_kind["INCOME"],
+        "description": "Salary",
         "amount_cents": 250_00,
         "account_id": account.json()["id"],
         "category_id": category.json()["id"],
@@ -232,6 +323,7 @@ def test_composition_uses_real_services_and_durable_audit(
     }
     assert by_kind["TRANSFER"] == {
         **by_kind["TRANSFER"],
+        "description": "Move to savings",
         "amount_cents": 50_00,
         "account_id": account.json()["id"],
         "category_id": None,

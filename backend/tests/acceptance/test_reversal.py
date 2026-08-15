@@ -53,7 +53,7 @@ def test_reversal_is_new_period_event_and_preserves_original_snapshot(
         SPACE_ID,
         TransactionKind.INCOME,
         date(2026, 8, 3),
-        "Corrected",
+        "  Corrected  ",
         900,
         account.id,
         category.id,
@@ -64,7 +64,6 @@ def test_reversal_is_new_period_event_and_preserves_original_snapshot(
             original_result.transaction_id,
             None,
             None,
-            "Correction",
             "reverse-1",
             replacement,
         )
@@ -75,7 +74,6 @@ def test_reversal_is_new_period_event_and_preserves_original_snapshot(
             original_result.transaction_id,
             None,
             None,
-            "Correction",
             "reverse-1",
             replacement,
         )
@@ -95,10 +93,12 @@ def test_reversal_is_new_period_event_and_preserves_original_snapshot(
     assert reversal.status is TransactionStatus.POSTED
     assert reversal.economic_date == date(2026, 8, 2)
     assert reversal.cash_date == date(2026, 8, 2)
+    assert reversal.description == "Reversión de: Salary"
     assert [entry.signed_cents for entry in reversal.entries] == [
         -entry.signed_cents for entry in original.entries
     ]
     assert corrected.status is TransactionStatus.DRAFT
+    assert corrected.description == "Corrected"
     assert original_view.replacement_transaction_id == corrected.id
     assert replacement_view.corrected_original_transaction_id == original.id
     assert balance == 0

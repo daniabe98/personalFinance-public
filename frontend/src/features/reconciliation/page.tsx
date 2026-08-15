@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { parseEurCents } from "../../lib/money";
 import {
@@ -16,6 +16,28 @@ interface ReconciliationRequest {
   readonly cutoff_date: string;
   readonly actual_balance_cents: number;
   readonly selected_entry_ids: readonly string[];
+}
+
+function requestKey(request: ReconciliationRequest): string {
+  return JSON.stringify(request);
+}
+
+function createRequest(
+  account: string,
+  cutoff: string,
+  hasCutoffDate: boolean,
+  actualBalanceCents: number | null,
+  ids: ReadonlySet<string>,
+): ReconciliationRequest | null {
+  if (account === "" || !hasCutoffDate || actualBalanceCents === null) {
+    return null;
+  }
+  return {
+    account_id: account,
+    cutoff_date: cutoff,
+    actual_balance_cents: actualBalanceCents,
+    selected_entry_ids: [...ids],
+  };
 }
 
 export interface ReconciliationAccount {
@@ -54,11 +76,22 @@ export function ReconciliationPage({
     useState<readonly ReconciliationCandidate[]>();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [preview, setPreview] = useState<ReconciliationPreview>();
-  const [error, setError] = useState("");
+  const [previewRequestKey, setPreviewRequestKey] = useState("");
+  const [accountError, setAccountError] = useState("");
+  const [candidateError, setCandidateError] = useState("");
+  const [previewError, setPreviewError] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const requestVersion = useRef(0);
+  const completionInFlight = useRef(false);
+  const parsedActual = parseEurCents(actual);
+  const hasCutoffDate = /^\d{4}-\d{2}-\d{2}$/.test(cutoff);
+  const actualBalanceCents = parsedActual.ok ? parsedActual.value : null;
 
   useEffect(() => {
     let active = true;
+    setAccountError("");
     void api.accounts().then((result) => {
       if (!active) return;
       if (result.ok) {
@@ -68,7 +101,7 @@ export function ReconciliationPage({
         setAccounts(available);
         setAccount((current) => current || available[0]?.id || "");
       } else {
-        setError(result.message);
+        setAccountError(result.message);
       }
     });
     return () => {
@@ -76,61 +109,124 @@ export function ReconciliationPage({
     };
   }, [api]);
 
-  function request(ids: ReadonlySet<string>): ReconciliationRequest | null {
-    const parsed = parseEurCents(actual);
-    if (!parsed.ok) {
-      setError(parsed.message);
-      return null;
-    }
-    return {
-      account_id: account,
-      cutoff_date: cutoff,
-      actual_balance_cents: parsed.value,
-      selected_entry_ids: [...ids],
+  useEffect(() => {
+    let active = true;
+    setCandidateError("");
+    setCandidates(undefined);
+    if (account === "" || !hasCutoffDate) return;
+
+    void api.candidates(account, cutoff).then((result) => {
+      if (!active) return;
+      if (result.ok) setCandidates(result.data);
+      else setCandidateError(result.message);
+    });
+    return () => {
+      active = false;
     };
-  }
+  }, [account, api, cutoff, hasCutoffDate]);
 
-  async function review(): Promise<void> {
-    setError("");
+  useEffect(() => {
+    let active = true;
     setCompleted(false);
-    if (account === "") {
-      setError("Crea una cuenta conciliable antes de revisar movimientos.");
+    setPreviewError("");
+    const payload = createRequest(
+      account,
+      cutoff,
+      hasCutoffDate,
+      actualBalanceCents,
+      selected,
+    );
+    if (payload === null || selected.size === 0) {
+      setIsPreviewLoading(false);
+      setPreview(undefined);
+      setPreviewRequestKey("");
       return;
     }
-    const candidateResult = await api.candidates(account, cutoff);
-    if (!candidateResult.ok) {
-      setError(candidateResult.message);
-      return;
-    }
-    setCandidates(candidateResult.data);
-    const payload = request(new Set());
-    if (payload === null) return;
-    const result = await api.preview(payload);
-    if (result.ok) setPreview(result.data);
-    else setError(result.message);
-  }
 
-  async function select(entryId: string, checked: boolean): Promise<void> {
+    setIsPreviewLoading(true);
+    void api.preview(payload).then((result) => {
+      if (!active) return;
+      setIsPreviewLoading(false);
+      if (result.ok) {
+        setPreview(result.data);
+        setPreviewRequestKey(requestKey(payload));
+      } else {
+        setPreview(undefined);
+        setPreviewRequestKey("");
+        setPreviewError(result.message);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [account, actualBalanceCents, api, cutoff, hasCutoffDate, selected]);
+
+  function select(entryId: string, checked: boolean): void {
+    invalidateCurrentRequest();
     const next = new Set(selected);
     if (checked) next.add(entryId);
     else next.delete(entryId);
     setSelected(next);
-    const payload = request(next);
-    if (payload === null) return;
-    const result = await api.preview(payload);
-    if (result.ok) setPreview(result.data);
-    else setError(result.message);
+  }
+
+  function invalidateCurrentRequest(): void {
+    requestVersion.current += 1;
+    setCompleted(false);
   }
 
   async function complete(): Promise<void> {
-    const payload = request(selected);
-    if (payload === null) return;
-    const result = await api.complete(payload);
-    if (result.ok) {
-      setPreview(result.data);
-      setCompleted(true);
-    } else setError(result.message);
+    const payload = createRequest(
+      account,
+      cutoff,
+      hasCutoffDate,
+      actualBalanceCents,
+      selected,
+    );
+    if (
+      payload === null ||
+      selected.size === 0 ||
+      preview === undefined ||
+      preview.difference_cents !== 0 ||
+      previewRequestKey !== requestKey(payload) ||
+      isPreviewLoading ||
+      isCompleting ||
+      completionInFlight.current
+    ) {
+      return;
+    }
+
+    const version = requestVersion.current;
+    const snapshotKey = requestKey(payload);
+    completionInFlight.current = true;
+    setIsCompleting(true);
+    setPreviewError("");
+    try {
+      const result = await api.complete(payload);
+      if (version !== requestVersion.current) return;
+      if (result.ok) {
+        setPreview(result.data);
+        setPreviewRequestKey(snapshotKey);
+        setCompleted(true);
+      } else {
+        setPreviewError(result.message);
+      }
+    } finally {
+      completionInFlight.current = false;
+      setIsCompleting(false);
+    }
   }
+
+  const currentRequest = createRequest(
+    account,
+    cutoff,
+    hasCutoffDate,
+    actualBalanceCents,
+    selected,
+  );
+  const hasCurrentPreview =
+    currentRequest !== null &&
+    selected.size > 0 &&
+    previewRequestKey === requestKey(currentRequest);
 
   return (
     <>
@@ -141,7 +237,11 @@ export function ReconciliationPage({
           Cuenta
           <select
             value={account}
-            onChange={(event) => setAccount(event.target.value)}
+            onChange={(event) => {
+              invalidateCurrentRequest();
+              setSelected(new Set());
+              setAccount(event.target.value);
+            }}
           >
             {accounts.length === 0 ? (
               <option value="">Sin cuentas conciliables</option>
@@ -158,7 +258,11 @@ export function ReconciliationPage({
           <input
             type="date"
             value={cutoff}
-            onChange={(event) => setCutoff(event.target.value)}
+            onChange={(event) => {
+              invalidateCurrentRequest();
+              setSelected(new Set());
+              setCutoff(event.target.value);
+            }}
           />
         </label>
         <label className="field">
@@ -166,32 +270,43 @@ export function ReconciliationPage({
           <input
             inputMode="decimal"
             value={actual}
-            onChange={(event) => setActual(event.target.value)}
+            onChange={(event) => {
+              invalidateCurrentRequest();
+              setActual(event.target.value);
+            }}
           />
         </label>
-        <button type="button" onClick={() => void review()}>
-          Revisar movimientos
-        </button>
       </div>
-      {error ? <p role="alert">{error}</p> : null}
+      <ReconciliationSummary
+        progress={{
+          hasAccount: account !== "",
+          hasCutoffDate,
+          hasActualBalance: actualBalanceCents !== null,
+        }}
+        preview={preview}
+        isLoading={isPreviewLoading}
+        error={accountError || candidateError || previewError}
+      />
       {candidates ? (
         <ReconciliationEntryList
           candidates={candidates}
           selected={selected}
-          onChange={(id, checked) => void select(id, checked)}
+          onChange={select}
         />
       ) : null}
       {preview ? (
-        <>
-          <ReconciliationSummary preview={preview} />
-          <button
-            type="button"
-            disabled={preview.difference_cents !== 0}
-            onClick={() => void complete()}
-          >
-            Completar conciliación
-          </button>
-        </>
+        <button
+          type="button"
+          disabled={
+            !hasCurrentPreview ||
+            preview.difference_cents !== 0 ||
+            isPreviewLoading ||
+            isCompleting
+          }
+          onClick={() => void complete()}
+        >
+          Completar conciliación
+        </button>
       ) : null}
       {completed ? <p role="status">Conciliación completada</p> : null}
     </>

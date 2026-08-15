@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from alembic import command
-from app.ledger.domain.transaction import TransactionStatus
+from app.ledger.domain.transaction import TransactionKind, TransactionStatus
 from app.reconciliation.domain.errors import (
     DuplicateCompletedMembershipError,
     IneligibleAccountError,
@@ -169,6 +169,7 @@ def _transaction(
     cash_date: date | None,
     entries: tuple[EntryRecord, ...],
     *,
+    description: str | None = None,
     state: str = "POSTED",
 ) -> None:
     record = TransactionRecord(
@@ -178,6 +179,7 @@ def _transaction(
         state="_POSTING",
         economic_date=economic_date,
         cash_date=cash_date,
+        description=description,
     )
     session.add(record)
     session.flush()
@@ -225,6 +227,7 @@ def _seed_opening_and_income(harness: Harness) -> None:
                     cents=20_000,
                 ),
             ),
+            description="July salary",
         )
 
 
@@ -284,6 +287,14 @@ def test_repository_lists_cutoff_candidates_and_excludes_category_and_future(
     assert tuple(candidate.eligibility_date for candidate in candidates) == (
         date(2026, 7, 1),
         date(2026, 7, 5),
+    )
+    assert tuple(candidate.description for candidate in candidates) == (
+        None,
+        "July salary",
+    )
+    assert tuple(candidate.kind for candidate in candidates) == (
+        TransactionKind.OPENING,
+        TransactionKind.INCOME,
     )
 
 

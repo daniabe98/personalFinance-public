@@ -22,6 +22,7 @@ from app.ledger.ports.audit import NullFinancialAuditSink
 from app.reporting.adapters.sql_queries import SqlAlchemyReportingLedgerReader
 from app.reporting.application.queries import ReportQueryService
 from app.reporting.domain.dtos import ReportInterval
+from app.shared.models_ledger import TransactionRecord
 from tests.support.ledger import SPACE_ID
 
 
@@ -46,9 +47,21 @@ def test_reports_use_exact_dates_and_preserve_cross_period_reversal(ledger_uow_f
     expense_category = catalog.create_category(
         CreateCategory(SPACE_ID, "Food", CategoryKind.EXPENSE)
     )
-    commands.create_opening(
-        OpeningCommand(SPACE_ID, bank.id, 2000, date(2026, 1, 1), None, "opening")
+    opening = commands.create_opening(
+        OpeningCommand(
+            SPACE_ID,
+            bank.id,
+            2000,
+            date(2026, 1, 1),
+            "Opening balance",
+            "opening",
+        )
     )
+    with uow_factory() as unit_of_work:
+        legacy = unit_of_work.session.get(TransactionRecord, opening.transaction_id)
+        assert legacy is not None
+        legacy.description = None
+        unit_of_work.commit()
     income = commands.create_income(
         IncomeCommand(
             SPACE_ID,
@@ -103,7 +116,6 @@ def test_reports_use_exact_dates_and_preserve_cross_period_reversal(ledger_uow_f
             income.transaction_id,
             date(2026, 2, 5),
             date(2026, 2, 5),
-            "Correction",
             "reverse-income",
         )
     )
@@ -154,3 +166,11 @@ def test_reports_use_exact_dates_and_preserve_cross_period_reversal(ledger_uow_f
     assert january_net_worth.net_worth_cents == 2700
     assert february_net_worth.net_worth_cents == 1700
     assert all(value == int(value) for value in (january_net_worth.assets_cents,))
+    assert tuple(item.description for item in january_economic.contributions) == (
+        "Salary",
+        "Food",
+    )
+    assert tuple(item.description for item in february_economic.contributions) == (
+        "Reversión de: Salary",
+    )
+    assert january_net_worth.contributions[0].description is None

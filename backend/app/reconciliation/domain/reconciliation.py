@@ -33,6 +33,8 @@ class ReconciliationCandidate:
     transaction_id: str
     space_id: str
     account_id: str
+    description: str | None
+    kind: TransactionKind
     eligibility_date: date
     signed_effect_cents: int
 
@@ -72,6 +74,8 @@ class ReconciliationCandidate:
             transaction_id=transaction.id,
             space_id=entry.space_id,
             account_id=account.id,
+            description=transaction.description,
+            kind=transaction.kind,
             eligibility_date=eligibility_date,
             signed_effect_cents=entry.signed_cents,
         )

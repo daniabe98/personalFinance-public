@@ -2,7 +2,7 @@ import { formatEurCents } from "../../lib/money";
 
 export interface ReconciliationCandidate {
   readonly entry_id: string;
-  readonly description: string;
+  readonly description: string | null;
   readonly effect_cents: number;
   readonly eligibility_date: string;
   readonly kind: string;
@@ -33,7 +33,7 @@ export function ReconciliationEntryList({
               }
             />
             <span>
-              <span>{candidate.description}</span>
+              <span>{candidate.description ?? "Sin descripción"}</span>
               {" · "}
               <span>{candidate.eligibility_date}</span>
               {" · "}

@@ -59,6 +59,7 @@ export function TransactionForm({
   );
   const [categoryId, setCategoryId] = useState(draft?.category_id ?? "");
   const [description, setDescription] = useState(draft?.description ?? "");
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [summary, setSummary] = useState<MovementInput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const retry = useRef<{
@@ -76,6 +77,18 @@ export function TransactionForm({
 
   function prepare(): void {
     const parsedAmount = parseEurCents(amount);
+    const normalizedDescription = description.trim();
+    if (
+      normalizedDescription.length === 0 ||
+      normalizedDescription.length > 500
+    ) {
+      setDescriptionError(
+        "Escribe una descripción de entre 1 y 500 caracteres.",
+      );
+      setError(null);
+      return;
+    }
+    setDescriptionError(null);
     if (
       !parsedAmount.ok ||
       parsedAmount.value <= 0 ||
@@ -100,7 +113,7 @@ export function TransactionForm({
       kind,
       amount_cents: parsedAmount.value,
       economic_date: economicDate,
-      description: description.trim() || null,
+      description: normalizedDescription,
       account_id: accountId,
       ...(kind === "TRANSFER" ? { destination_account_id: destinationId } : {}),
       ...(kind === "INCOME" || kind === "EXPENSE"
@@ -125,6 +138,13 @@ export function TransactionForm({
     const signature = JSON.stringify(summary);
     if (retry.current?.signature !== signature)
       retry.current = { signature, key: createIdempotencyKey() };
+    if (draft !== null) {
+      const updated = await api.updateDraft(draft.id, summary);
+      if (!updated.ok) {
+        setError("No se pudo actualizar el borrador antes de contabilizarlo.");
+        return;
+      }
+    }
     const result =
       draft === null
         ? await api.post(summary, retry.current.key)
@@ -142,6 +162,7 @@ export function TransactionForm({
     retry.current = null;
     setSummary(null);
     setAmount("");
+    setDescription("");
     onSaved();
   }
   if (summary !== null)
@@ -157,6 +178,9 @@ export function TransactionForm({
           </strong>
         </p>
         <p className="money">{formatEurCents(summary.amount_cents)}</p>
+        <p>
+          Descripción: <strong>{summary.description}</strong>
+        </p>
         <p>Fecha del movimiento: {summary.economic_date}</p>
         {summary.cash_date ? (
           <p>Fecha en la cuenta: {summary.cash_date}</p>
@@ -298,12 +322,24 @@ export function TransactionForm({
           </div>
         ) : null}
         <div className="field">
-          <label htmlFor="description">Descripción (opcional)</label>
+          <label htmlFor="description">Descripción</label>
           <input
+            aria-describedby={`description-help${descriptionError === null ? "" : " description-error"}`}
             id="description"
+            maxLength={500}
+            required
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={(event) => {
+              setDescription(event.target.value);
+              setDescriptionError(null);
+            }}
           />
+          <p id="description-help">1–500 caracteres.</p>
+          {descriptionError === null ? null : (
+            <div id="description-error">
+              <ErrorMessage>{descriptionError}</ErrorMessage>
+            </div>
+          )}
         </div>
       </div>
       <div className="actions">

@@ -183,6 +183,7 @@ def test_failed_verification_is_durable_without_false_success_or_path_in_audit(
         last_attempt_date=date(2026, 3, 29),
         last_attempt_status=BackupRunStatus.FAILED,
         verification_status="failed",
+        failure_detail="BACKUP_ATTEMPT_FAILED",
     )
     assert recovery_harness.audit.calls == [
         AuditCall("BACKUP", "FAILURE", "backup-failure", "failed")
