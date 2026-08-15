@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { describe, expect, it, vi } from "vitest";
@@ -71,11 +71,34 @@ function reconciliationApi(): ReconciliationApi {
   };
 }
 
+function deferred<T>(): {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T) => void;
+} {
+  let resolvePromise: ((value: T) => void) | undefined;
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve;
+  });
+  return {
+    promise,
+    resolve(value) {
+      if (resolvePromise === undefined) {
+        throw new Error("Deferred promise is not initialized.");
+      }
+      resolvePromise(value);
+    },
+  };
+}
+
 describe("ReconciliationPage", () => {
   it("guides selection using only the canonical server difference", async () => {
     const user = userEvent.setup();
     const api = reconciliationApi();
     const { container } = render(<ReconciliationPage api={api} />);
+
+    expect(screen.getByRole("heading", { name: "Revisión" })).toBeVisible();
+    expect(screen.getByText("Fecha pendiente")).toBeVisible();
+    expect(screen.getByText("Saldo real pendiente")).toBeVisible();
 
     await screen.findByRole("option", { name: "Cuenta corriente" });
     await user.selectOptions(
@@ -84,9 +107,6 @@ describe("ReconciliationPage", () => {
     );
     await user.type(screen.getByLabelText("Fecha de corte"), "2026-06-30");
     await user.type(screen.getByLabelText("Saldo real"), "1500,00");
-    await user.click(
-      screen.getByRole("button", { name: "Revisar movimientos" }),
-    );
 
     expect(await screen.findByText("Base inicial")).toBeVisible();
     expect(screen.getByText("Saldo al empezar")).toBeVisible();
@@ -101,8 +121,8 @@ describe("ReconciliationPage", () => {
     income.focus();
     await user.keyboard(" ");
 
-    expect(await screen.findByText("La diferencia es cero.")).toBeVisible();
-    expect(screen.getByText("1.500,00 €")).toBeVisible();
+    expect(await screen.findByText("Cuadrado")).toBeVisible();
+    expect(screen.getAllByText("1.500,00 €")).toHaveLength(2);
     expect(
       screen.getByRole("button", { name: "Completar conciliación" }),
     ).toBeEnabled();
@@ -139,9 +159,6 @@ describe("ReconciliationPage", () => {
     );
     await user.type(screen.getByLabelText("Fecha de corte"), "2026-06-30");
     await user.type(screen.getByLabelText("Saldo real"), "0");
-    await user.click(
-      screen.getByRole("button", { name: "Revisar movimientos" }),
-    );
     expect(await screen.findByText("Sin movimientos pendientes")).toBeVisible();
 
     const failedApi: ReconciliationApi = {
@@ -152,9 +169,6 @@ describe("ReconciliationPage", () => {
       }),
     };
     rerender(<ReconciliationPage api={failedApi} />);
-    await user.click(
-      screen.getByRole("button", { name: "Revisar movimientos" }),
-    );
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "No se pudieron cargar los movimientos",
     );
@@ -171,14 +185,9 @@ describe("ReconciliationPage", () => {
     await screen.findByRole("option", { name: "Sin cuentas conciliables" });
     await user.type(screen.getByLabelText("Fecha de corte"), "2026-06-30");
     await user.type(screen.getByLabelText("Saldo real"), "0");
-    await user.click(
-      screen.getByRole("button", { name: "Revisar movimientos" }),
-    );
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Crea una cuenta conciliable",
-    );
+    expect(screen.getByText("Cuenta pendiente")).toBeVisible();
     expect(api.candidates).not.toHaveBeenCalled();
+    expect(api.preview).not.toHaveBeenCalled();
   });
 
   it("announces an account catalog failure", async () => {
@@ -194,5 +203,66 @@ describe("ReconciliationPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "No se pudieron cargar las cuentas",
     );
+  });
+
+  it("does not request a preview until account, date and balance are valid", async () => {
+    const user = userEvent.setup();
+    const api = reconciliationApi();
+    render(<ReconciliationPage api={api} />);
+
+    await screen.findByRole("option", { name: "Cuenta corriente" });
+    expect(api.preview).not.toHaveBeenCalled();
+    await user.type(screen.getByLabelText("Fecha de corte"), "2026-06-30");
+    expect(api.preview).not.toHaveBeenCalled();
+    await user.type(screen.getByLabelText("Saldo real"), "importe incorrecto");
+    expect(api.preview).not.toHaveBeenCalled();
+    expect(screen.getByText("Saldo real pendiente")).toBeVisible();
+
+    await user.clear(screen.getByLabelText("Saldo real"));
+    fireEvent.change(screen.getByLabelText("Saldo real"), {
+      target: { value: "1500,00" },
+    });
+
+    expect(api.preview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account_id: "account-current",
+        cutoff_date: "2026-06-30",
+        actual_balance_cents: 150_000,
+        selected_entry_ids: [],
+      }),
+    );
+    expect(await screen.findByText("Con diferencia")).toBeVisible();
+  });
+
+  it("keeps only the latest preview response and latest error", async () => {
+    const user = userEvent.setup();
+    const first = deferred<Awaited<ReturnType<ReconciliationApi["preview"]>>>();
+    const second =
+      deferred<Awaited<ReturnType<ReconciliationApi["preview"]>>>();
+    const api: ReconciliationApi = {
+      ...reconciliationApi(),
+      preview: vi
+        .fn()
+        .mockImplementationOnce(() => first.promise)
+        .mockImplementationOnce(() => second.promise),
+    };
+    render(<ReconciliationPage api={api} />);
+
+    await screen.findByRole("option", { name: "Cuenta corriente" });
+    await user.type(screen.getByLabelText("Fecha de corte"), "2026-06-30");
+    fireEvent.change(screen.getByLabelText("Saldo real"), {
+      target: { value: "1500,00" },
+    });
+    expect(await screen.findByText("Calculando…")).toBeVisible();
+    const income = await screen.findByRole("checkbox", { name: /Nómina/ });
+    await user.click(income);
+    expect(api.preview).toHaveBeenCalledTimes(2);
+
+    second.resolve({ ok: true, data: preview(["entry-income"]) });
+    expect(await screen.findByText("Cuadrado")).toBeVisible();
+    first.resolve({ ok: false, message: "Error antiguo" });
+
+    expect(await screen.findByText("Cuadrado")).toBeVisible();
+    expect(screen.queryByText("Error antiguo")).not.toBeInTheDocument();
   });
 });

@@ -8,6 +8,7 @@ import {
   type ReconciliationApi,
   ReconciliationPage,
 } from "./features/reconciliation/page";
+import type { ReconciliationCandidate } from "./features/reconciliation/entry-list";
 import type {
   DetailCatalogItem,
   MovementDetail,
@@ -40,22 +41,11 @@ function reconciliationApi(client: ApiClient): ReconciliationApi {
       const path =
         `/api/v1/reconciliations/candidates?account_id=${encodeURIComponent(accountId)}` +
         `&cutoff_date=${encodeURIComponent(cutoffDate)}`;
-      const result = await client.request<
-        readonly {
-          readonly entry_id: string;
-          readonly eligibility_date: string;
-          readonly effect_cents: number;
-        }[]
-      >(path as `/api/v1/${string}`);
-      if (!result.ok) return viewResult(result);
-      return {
-        ok: true,
-        data: result.data.map((item) => ({
-          ...item,
-          description: "Movimiento",
-          kind: "MOVEMENT",
-        })),
-      };
+      return viewResult(
+        await client.request<readonly ReconciliationCandidate[]>(
+          path as `/api/v1/${string}`,
+        ),
+      );
     },
     async preview(request) {
       return viewResult(

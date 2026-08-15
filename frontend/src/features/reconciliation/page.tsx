@@ -54,11 +54,18 @@ export function ReconciliationPage({
     useState<readonly ReconciliationCandidate[]>();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [preview, setPreview] = useState<ReconciliationPreview>();
-  const [error, setError] = useState("");
+  const [accountError, setAccountError] = useState("");
+  const [candidateError, setCandidateError] = useState("");
+  const [previewError, setPreviewError] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const parsedActual = parseEurCents(actual);
+  const hasCutoffDate = /^\d{4}-\d{2}-\d{2}$/.test(cutoff);
+  const actualBalanceCents = parsedActual.ok ? parsedActual.value : null;
 
   useEffect(() => {
     let active = true;
+    setAccountError("");
     void api.accounts().then((result) => {
       if (!active) return;
       if (result.ok) {
@@ -68,7 +75,7 @@ export function ReconciliationPage({
         setAccounts(available);
         setAccount((current) => current || available[0]?.id || "");
       } else {
-        setError(result.message);
+        setAccountError(result.message);
       }
     });
     return () => {
@@ -76,50 +83,68 @@ export function ReconciliationPage({
     };
   }, [api]);
 
+  useEffect(() => {
+    let active = true;
+    setCandidateError("");
+    setCandidates(undefined);
+    if (account === "" || !hasCutoffDate) return;
+
+    void api.candidates(account, cutoff).then((result) => {
+      if (!active) return;
+      if (result.ok) setCandidates(result.data);
+      else setCandidateError(result.message);
+    });
+    return () => {
+      active = false;
+    };
+  }, [account, api, cutoff, hasCutoffDate]);
+
+  useEffect(() => {
+    let active = true;
+    setCompleted(false);
+    setPreviewError("");
+    setPreview(undefined);
+    if (account === "" || !hasCutoffDate || actualBalanceCents === null) {
+      setIsPreviewLoading(false);
+      return;
+    }
+
+    setIsPreviewLoading(true);
+    void api
+      .preview({
+        account_id: account,
+        cutoff_date: cutoff,
+        actual_balance_cents: actualBalanceCents,
+        selected_entry_ids: [...selected],
+      })
+      .then((result) => {
+        if (!active) return;
+        setIsPreviewLoading(false);
+        if (result.ok) setPreview(result.data);
+        else setPreviewError(result.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [account, actualBalanceCents, api, cutoff, hasCutoffDate, selected]);
+
   function request(ids: ReadonlySet<string>): ReconciliationRequest | null {
-    const parsed = parseEurCents(actual);
-    if (!parsed.ok) {
-      setError(parsed.message);
+    if (account === "" || !hasCutoffDate || actualBalanceCents === null) {
       return null;
     }
     return {
       account_id: account,
       cutoff_date: cutoff,
-      actual_balance_cents: parsed.value,
+      actual_balance_cents: actualBalanceCents,
       selected_entry_ids: [...ids],
     };
   }
 
-  async function review(): Promise<void> {
-    setError("");
-    setCompleted(false);
-    if (account === "") {
-      setError("Crea una cuenta conciliable antes de revisar movimientos.");
-      return;
-    }
-    const candidateResult = await api.candidates(account, cutoff);
-    if (!candidateResult.ok) {
-      setError(candidateResult.message);
-      return;
-    }
-    setCandidates(candidateResult.data);
-    const payload = request(new Set());
-    if (payload === null) return;
-    const result = await api.preview(payload);
-    if (result.ok) setPreview(result.data);
-    else setError(result.message);
-  }
-
-  async function select(entryId: string, checked: boolean): Promise<void> {
+  function select(entryId: string, checked: boolean): void {
     const next = new Set(selected);
     if (checked) next.add(entryId);
     else next.delete(entryId);
     setSelected(next);
-    const payload = request(next);
-    if (payload === null) return;
-    const result = await api.preview(payload);
-    if (result.ok) setPreview(result.data);
-    else setError(result.message);
   }
 
   async function complete(): Promise<void> {
@@ -129,7 +154,7 @@ export function ReconciliationPage({
     if (result.ok) {
       setPreview(result.data);
       setCompleted(true);
-    } else setError(result.message);
+    } else setPreviewError(result.message);
   }
 
   return (
@@ -141,7 +166,10 @@ export function ReconciliationPage({
           Cuenta
           <select
             value={account}
-            onChange={(event) => setAccount(event.target.value)}
+            onChange={(event) => {
+              setSelected(new Set());
+              setAccount(event.target.value);
+            }}
           >
             {accounts.length === 0 ? (
               <option value="">Sin cuentas conciliables</option>
@@ -158,7 +186,10 @@ export function ReconciliationPage({
           <input
             type="date"
             value={cutoff}
-            onChange={(event) => setCutoff(event.target.value)}
+            onChange={(event) => {
+              setSelected(new Set());
+              setCutoff(event.target.value);
+            }}
           />
         </label>
         <label className="field">
@@ -169,29 +200,32 @@ export function ReconciliationPage({
             onChange={(event) => setActual(event.target.value)}
           />
         </label>
-        <button type="button" onClick={() => void review()}>
-          Revisar movimientos
-        </button>
       </div>
-      {error ? <p role="alert">{error}</p> : null}
+      <ReconciliationSummary
+        progress={{
+          hasAccount: account !== "",
+          hasCutoffDate,
+          hasActualBalance: actualBalanceCents !== null,
+        }}
+        preview={preview}
+        isLoading={isPreviewLoading}
+        error={accountError || candidateError || previewError}
+      />
       {candidates ? (
         <ReconciliationEntryList
           candidates={candidates}
           selected={selected}
-          onChange={(id, checked) => void select(id, checked)}
+          onChange={select}
         />
       ) : null}
       {preview ? (
-        <>
-          <ReconciliationSummary preview={preview} />
-          <button
-            type="button"
-            disabled={preview.difference_cents !== 0}
-            onClick={() => void complete()}
-          >
-            Completar conciliación
-          </button>
-        </>
+        <button
+          type="button"
+          disabled={preview.difference_cents !== 0}
+          onClick={() => void complete()}
+        >
+          Completar conciliación
+        </button>
       ) : null}
       {completed ? <p role="status">Conciliación completada</p> : null}
     </>
