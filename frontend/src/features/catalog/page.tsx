@@ -8,6 +8,8 @@ import { formatEurCents } from "../../lib/money";
 import { createCatalogApi, type CatalogApi } from "./api";
 import { AccountForm, CategoryForm } from "./forms";
 
+type CatalogTab = "accounts" | "categories";
+
 function ItemActions({
   archived,
   name,
@@ -60,6 +62,9 @@ export function CatalogPage({
     [csrf, suppliedApi],
   );
   const [showArchived, setShowArchived] = useState(false);
+  const [activeTab, setActiveTab] = useState<CatalogTab>("accounts");
+  const accountsTabRef = useRef<HTMLButtonElement>(null);
+  const categoriesTabRef = useRef<HTMLButtonElement>(null);
   const [accounts, setAccounts] = useState<readonly AccountResponse[]>([]);
   const [categories, setCategories] = useState<readonly CategoryResponse[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -81,6 +86,32 @@ export function CatalogPage({
   const visibleCategories = categories.filter(
     (item) => item.is_archived === showArchived,
   );
+  function activateTabFromKeyboard(
+    event: React.KeyboardEvent<HTMLButtonElement>,
+  ): void {
+    let nextTab: CatalogTab;
+    switch (event.key) {
+      case "ArrowRight":
+        nextTab = activeTab === "accounts" ? "categories" : "accounts";
+        break;
+      case "ArrowLeft":
+        nextTab = activeTab === "accounts" ? "categories" : "accounts";
+        break;
+      case "Home":
+        nextTab = "accounts";
+        break;
+      case "End":
+        nextTab = "categories";
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    setActiveTab(nextTab);
+    const nextTabRef =
+      nextTab === "accounts" ? accountsTabRef : categoriesTabRef;
+    nextTabRef.current?.focus();
+  }
   if (state === "loading")
     return <LoadingState label="Cargando organización…" />;
   if (state === "error")
@@ -89,6 +120,40 @@ export function CatalogPage({
     <section aria-labelledby="catalog-title">
       <p className="eyebrow">Orden cotidiano</p>
       <h1 id="catalog-title">Organizar</h1>
+      <div
+        aria-label="Organizar catálogos"
+        className="catalog-tabs"
+        role="tablist"
+      >
+        <button
+          aria-controls="accounts-panel"
+          aria-selected={activeTab === "accounts"}
+          className="catalog-tab"
+          id="accounts-tab"
+          onClick={() => setActiveTab("accounts")}
+          onKeyDown={activateTabFromKeyboard}
+          ref={accountsTabRef}
+          role="tab"
+          tabIndex={activeTab === "accounts" ? 0 : -1}
+          type="button"
+        >
+          Cuentas
+        </button>
+        <button
+          aria-controls="categories-panel"
+          aria-selected={activeTab === "categories"}
+          className="catalog-tab"
+          id="categories-tab"
+          onClick={() => setActiveTab("categories")}
+          onKeyDown={activateTabFromKeyboard}
+          ref={categoriesTabRef}
+          role="tab"
+          tabIndex={activeTab === "categories" ? 0 : -1}
+          type="button"
+        >
+          Categorías
+        </button>
+      </div>
       <fieldset className="segmented">
         <legend className="sr-only">Estado de elementos</legend>
         <button
@@ -106,13 +171,14 @@ export function CatalogPage({
           Archivadas
         </button>
       </fieldset>
-      {!showArchived ? (
-        <div className="form-grid">
-          <AccountForm api={api} onCreated={() => void load()} />
-          <CategoryForm api={api} onCreated={() => void load()} />
-        </div>
-      ) : null}
-      <div className="catalog-grid">
+      <div
+        aria-labelledby="accounts-tab"
+        className="catalog-panel"
+        hidden={activeTab !== "accounts"}
+        id="accounts-panel"
+        role="tabpanel"
+      >
+        <AccountForm api={api} onCreated={() => void load()} />
         <section
           className="surface-solid catalog-list"
           aria-labelledby="accounts-title"
@@ -155,6 +221,15 @@ export function CatalogPage({
             </ul>
           )}
         </section>
+      </div>
+      <div
+        aria-labelledby="categories-tab"
+        className="catalog-panel"
+        hidden={activeTab !== "categories"}
+        id="categories-panel"
+        role="tabpanel"
+      >
+        <CategoryForm api={api} onCreated={() => void load()} />
         <section
           className="surface-solid catalog-list"
           aria-labelledby="categories-title"

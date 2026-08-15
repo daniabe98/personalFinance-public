@@ -113,11 +113,10 @@ ai-eng verify
 
 ## Estado
 
-`spec-001` y `spec-002` están `SHIPPED` y consolidadas. La entrega más reciente,
-el rediseño visual de la actividad del periodo, se integró mediante el squash
-merge del PR #4 con todos los checks requeridos en verde. No hay una
-especificación activa. La aceptación HITL doméstica de `spec-001` se confirmó
-el 2026-08-10.
+`spec-001` y `spec-002` están `SHIPPED` y consolidadas. `spec-003` está en
+implementación: exige una descripción rigurosa para escrituras nuevas y
+renueva Resumen, Revisión, Organizar y Backup con patrones visuales accesibles.
+La aceptación HITL doméstica de `spec-001` se confirmó el 2026-08-10.
 
 ## Licencia
 

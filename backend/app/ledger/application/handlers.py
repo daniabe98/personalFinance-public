@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import fields, is_dataclass
+from dataclasses import fields, is_dataclass, replace
 from datetime import date
 from uuid import uuid4
 
@@ -17,6 +17,7 @@ from app.ledger.application.commands import (
     TransferCommand,
 )
 from app.ledger.domain.account import AccountKind, CategoryKind
+from app.ledger.domain.description import normalize_required_description
 from app.ledger.domain.errors import ArchivedEntityError, InvalidLifecycleError
 from app.ledger.domain.posting_recipes import (
     expense_entries,
@@ -45,6 +46,10 @@ class FinancialCommandService:
         self._audit_sink = audit_sink
 
     def create_draft(self, command: DraftCommand) -> Transaction:
+        command = replace(
+            command,
+            description=normalize_required_description(command.description),
+        )
         self._validate_draft(command)
         draft = Transaction.draft(
             uuid4().hex,
@@ -61,6 +66,10 @@ class FinancialCommandService:
         return draft
 
     def update_draft(self, transaction_id: str, command: DraftCommand) -> Transaction:
+        command = replace(
+            command,
+            description=normalize_required_description(command.description),
+        )
         self._validate_draft(command)
         with self._unit_of_work_factory() as unit_of_work:
             repository = self._repository_factory(unit_of_work.session)
@@ -99,11 +108,12 @@ class FinancialCommandService:
         def build(repository: LedgerReadRepository) -> Transaction:
             draft = repository.get_transaction(command.space_id, command.transaction_id)
             details = repository.get_draft_details(command.space_id, command.transaction_id)
+            description = normalize_required_description(draft.description)
             draft_command = DraftCommand(
                 space_id=draft.space_id,
                 kind=draft.kind,
                 economic_date=draft.economic_date,
-                description=draft.description,
+                description=description,
                 amount_cents=details.amount_cents,
                 account_id=details.account_id,
                 category_id=details.category_id,
@@ -123,6 +133,10 @@ class FinancialCommandService:
         )
 
     def create_opening(self, command: OpeningCommand) -> CommandResult:
+        command = replace(
+            command,
+            description=normalize_required_description(command.description),
+        )
         payload = self._payload(command)
 
         def build(repository: LedgerReadRepository) -> Transaction:
@@ -159,6 +173,10 @@ class FinancialCommandService:
         return self._create_category_movement(command, TransactionKind.EXPENSE)
 
     def create_transfer(self, command: TransferCommand) -> CommandResult:
+        command = replace(
+            command,
+            description=normalize_required_description(command.description),
+        )
         payload = self._payload(command)
 
         def build(repository: LedgerReadRepository) -> Transaction:
@@ -191,6 +209,10 @@ class FinancialCommandService:
     def _create_category_movement(
         self, command: IncomeCommand | ExpenseCommand, kind: TransactionKind
     ) -> CommandResult:
+        command = replace(
+            command,
+            description=normalize_required_description(command.description),
+        )
         payload = self._payload(command)
 
         def build(repository: LedgerReadRepository) -> Transaction:

@@ -8,7 +8,7 @@
 | Campo | Valor |
 |---|---|
 | Producto | Personal Finance |
-| Estado | `spec-001` y `spec-002` entregadas y consolidadas |
+| Estado | `spec-001` y `spec-002` entregadas; `spec-003` en implementación |
 | Versión | 0.1.0 integrada en `main` |
 | Uso | Privado, doméstico y limitado a una LAN de confianza |
 | Host y clientes | Windows 10/11 x64 |
@@ -24,7 +24,9 @@ conciliación, informes básicos, autenticación local, auditoría, backup diari
 restauración aislada. Tarjetas, préstamos, presupuestos, previsiones,
 subcategorías, multimoneda y colaboración avanzada quedan fuera de `spec-001`.
 `spec-002` refinó la presentación responsive y accesible de la actividad del
-periodo sin modificar contratos, cálculos ni semántica financiera.
+periodo. `spec-003` endurece prospectivamente la descripción de movimientos y
+rediseña Resumen, Revisión, Organizar y Backup sin modificar cálculos,
+clasificación contable ni evidencia histórica.
 
 ## 2. Resultados y requisitos
 

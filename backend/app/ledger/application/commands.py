@@ -29,7 +29,7 @@ class DraftCommand:
     space_id: str
     kind: TransactionKind
     economic_date: date
-    description: str | None
+    description: str
     amount_cents: int
     account_id: str | None = None
     category_id: str | None = None
@@ -51,7 +51,7 @@ class OpeningCommand:
     account_id: str
     amount_cents: int
     economic_date: date
-    description: str | None
+    description: str
     idempotency_key: str
 
 
@@ -63,7 +63,7 @@ class IncomeCommand:
     amount_cents: int
     economic_date: date
     cash_date: date | None
-    description: str | None
+    description: str
     idempotency_key: str
 
 
@@ -75,7 +75,7 @@ class ExpenseCommand:
     amount_cents: int
     economic_date: date
     cash_date: date | None
-    description: str | None
+    description: str
     idempotency_key: str
 
 
@@ -87,7 +87,7 @@ class TransferCommand:
     amount_cents: int
     economic_date: date
     cash_date: date | None
-    description: str | None
+    description: str
     idempotency_key: str
 
 
@@ -97,7 +97,6 @@ class ReverseCommand:
     original_transaction_id: str
     economic_date: date | None
     cash_date: date | None
-    description: str | None
     idempotency_key: str
     replacement: DraftCommand | None = None
 

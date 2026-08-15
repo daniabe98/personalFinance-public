@@ -1,7 +1,7 @@
 ---
 spec: spec-002
 title: Rediseño visual de actividad del periodo
-status: approved
+status: shipped
 pipeline: standard
 execution_route:
   version: 1

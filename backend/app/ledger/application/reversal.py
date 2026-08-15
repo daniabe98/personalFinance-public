@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import date
 from uuid import uuid4
 
 from app.ledger.application.commands import CommandResult, ReverseCommand
+from app.ledger.domain.description import (
+    normalize_required_description,
+    reversal_description,
+)
 from app.ledger.domain.errors import InvalidLifecycleError
 from app.ledger.domain.posting_recipes import reversal_entries
 from app.ledger.domain.transaction import Transaction, TransactionKind, TransactionStatus
@@ -35,6 +40,14 @@ class ReversalService:
         self._today = today
 
     def reverse(self, command: ReverseCommand) -> CommandResult:
+        if command.replacement is not None:
+            command = replace(
+                command,
+                replacement=replace(
+                    command.replacement,
+                    description=normalize_required_description(command.replacement.description),
+                ),
+            )
         payload = self._payload(command)
         try:
             with self._unit_of_work_factory() as unit_of_work:
@@ -66,7 +79,7 @@ class ReversalService:
                     TransactionKind.REVERSAL,
                     reversal_date,
                     reversal_cash_date,
-                    command.description,
+                    reversal_description(original.description),
                     reversal_entries(uuid4().hex, original.entries),
                 )
                 repository.add_posted(reversal)
@@ -175,7 +188,6 @@ class ReversalService:
                 command.economic_date.isoformat() if command.economic_date is not None else None
             ),
             "cash_date": (command.cash_date.isoformat() if command.cash_date is not None else None),
-            "description": command.description,
             "replacement": replacement_payload,
         }
 

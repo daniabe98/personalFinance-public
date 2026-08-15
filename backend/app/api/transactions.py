@@ -7,7 +7,7 @@ from typing import Annotated, Protocol, cast
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
-from pydantic import BaseModel, ConfigDict, Field, StrictInt
+from pydantic import BaseModel, ConfigDict, StrictInt, StringConstraints
 
 from app.api.dependencies import (
     require_authenticated_principal,
@@ -42,6 +42,10 @@ def _require_write_principal(
 
 WritePrincipal = Annotated[AuthenticatedPrincipal, Depends(_require_write_principal)]
 IdempotencyKey = Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=200)]
+RequiredDescription = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
+]
 
 
 class FinancialCommandsPort(Protocol):
@@ -70,7 +74,7 @@ class DraftRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: TransactionKind
     economic_date: date
-    description: str | None = Field(default=None, max_length=500)
+    description: RequiredDescription
     amount_cents: StrictInt
     account_id: str | None = None
     category_id: str | None = None
@@ -88,7 +92,7 @@ class OpeningRequest(BaseModel):
     account_id: str
     amount_cents: StrictInt
     economic_date: date
-    description: str | None = Field(default=None, max_length=500)
+    description: RequiredDescription
 
 
 class CategoryMovementRequest(OpeningRequest):
@@ -103,14 +107,13 @@ class TransferRequest(BaseModel):
     amount_cents: StrictInt
     economic_date: date
     cash_date: date | None = None
-    description: str | None = Field(default=None, max_length=500)
+    description: RequiredDescription
 
 
 class ReversalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     economic_date: date | None = None
     cash_date: date | None = None
-    description: str | None = Field(default=None, max_length=500)
 
 
 class CommandResponse(BaseModel):
@@ -424,7 +427,6 @@ def reverse_transaction(
                 transaction_id,
                 payload.economic_date,
                 payload.cash_date,
-                payload.description,
                 idempotency_key,
             )
         )

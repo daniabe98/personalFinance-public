@@ -8,6 +8,14 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/
 
 ### Added
 
+- Los nuevos movimientos exigirán una descripción clara y el Resumen podrá
+  consultar su detalle sin abandonar el informe.
+- Se incorporan composiciones visuales para Dinero disponible, Patrimonio,
+  Revisión, Organizar y Copia de seguridad, conservando cifras exactas y
+  navegación accesible.
+- Se documenta la doctrina de persistencia que asigna cada dato a una única
+  fuente writable y define cómo reconstruir sus proyecciones.
+
 - Ya está disponible la base de gobierno del proyecto mediante `ai-eng`, con
   controles de calidad, seguridad, trazabilidad y flujo de contribución.
 - Se han definido los principios constitucionales que priorizan la integridad
@@ -28,6 +36,10 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/
 
 ### Changed
 
+- Las decisiones de diseño viven junto a su spec; su índice estructurado se
+  trata como una proyección reconstruible, mientras las aceptaciones de riesgo
+  conservan su lifecycle canónico en el registro JSON.
+
 - La actividad del periodo presenta ahora un resumen editorial responsive y
   movimientos con fechas localizadas, importes firmados y enlaces de detalle
   accesibles, sin cambiar los cálculos ni el orden del informe.
@@ -46,3 +58,8 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/
 - HTTP LAN solo se habilita con `PF_TRANSPORT_MODE=http_lan`, origen RFC1918
   exacto, cookie `HttpOnly`/`SameSite=Strict`, CSRF y firewall privado. El riesgo
   explícito de tráfico sin cifrar se revisará el 2027-08-09.
+
+### Fixed
+
+- Los snapshots archivados de la spec 002 reflejan ahora sus estados terminales
+  reales y las referencias a la doctrina de persistencia dejan de estar rotas.
