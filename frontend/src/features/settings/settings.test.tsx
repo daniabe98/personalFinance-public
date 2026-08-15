@@ -1,17 +1,57 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { describe, expect, it, vi } from "vitest";
 
 import "../../test/setup";
+import { BackupStatus, type BackupStatusData } from "./backup-status";
 import { SettingsPage, type SettingsApi } from "./page";
+
+const backupStates = [
+  {
+    state: "NEVER_RUN",
+    last_valid_backup_date: null,
+    last_verification_failure_date: null,
+    verification_result: "NOT_AVAILABLE",
+    title: "Sin ejecutar",
+    explanation: "Todavía no se ha ejecutado ninguna copia de seguridad.",
+    verification: "No disponible",
+  },
+  {
+    state: "PENDING",
+    last_valid_backup_date: "2026-07-20",
+    last_verification_failure_date: null,
+    verification_result: "PENDING",
+    title: "Pendiente de verificación",
+    explanation: "La copia más reciente está esperando verificación.",
+    verification: "Pendiente",
+  },
+  {
+    state: "VERIFIED",
+    last_valid_backup_date: "2026-07-20",
+    last_verification_failure_date: null,
+    verification_result: "PASSED",
+    title: "Copia verificada",
+    explanation: "La copia más reciente se verificó correctamente.",
+    verification: "Correcta",
+  },
+  {
+    state: "FAILED",
+    last_valid_backup_date: "2026-07-20",
+    last_verification_failure_date: "2026-07-22",
+    verification_result: "FAILED",
+    title: "Verificación fallida",
+    explanation: "La copia más reciente no superó la verificación.",
+    verification: "Fallida",
+  },
+] as const;
 
 function settingsApi(): SettingsApi {
   return {
     backupStatus: vi.fn().mockResolvedValue({
       ok: true,
       data: {
-        state: "DEGRADED",
+        state: "FAILED",
         last_valid_backup_date: "2026-07-20",
         last_verification_failure_date: "2026-07-22",
         verification_result: "FAILED",
@@ -66,6 +106,47 @@ function settingsApi(): SettingsApi {
 }
 
 describe("SettingsPage", () => {
+  it.each(backupStates)(
+    "renders $state with a principal status and four explicit milestones",
+    (stateCase) => {
+      const status: BackupStatusData = {
+        ...stateCase,
+        domestic_date: "2026-07-23",
+        retention_count: 14,
+      };
+      const { container } = render(<BackupStatus status={status} />);
+
+      const surface = container.querySelector(".backup-surface");
+      if (!(surface instanceof HTMLElement)) {
+        throw new Error("Missing backup surface");
+      }
+      expect(surface).toHaveAttribute("data-backup-state", stateCase.state);
+      expect(
+        within(surface).getByRole("img", {
+          name: `Estado de la copia: ${stateCase.title}`,
+        }),
+      ).toBeVisible();
+      expect(
+        within(surface).getByRole("heading", {
+          name: stateCase.title,
+          level: 3,
+        }),
+      ).toBeVisible();
+      expect(surface).toHaveTextContent(stateCase.explanation);
+
+      const milestones = container.querySelector(".backup-milestones");
+      expect(milestones).not.toBeNull();
+      expect(milestones?.children).toHaveLength(4);
+      expect(milestones).toHaveTextContent("Última copia válida");
+      expect(milestones).toHaveTextContent("Verificación");
+      expect(milestones).toHaveTextContent("Retención");
+      expect(milestones).toHaveTextContent("Próxima ejecución");
+      expect(milestones).toHaveTextContent(stateCase.verification);
+      expect(container).not.toHaveTextContent(/restaur/i);
+      expect(container.querySelector("input[type='file']")).toBeNull();
+    },
+  );
+
   it("separates valid backup and failure, paginates redacted audit data, and has no restore control", async () => {
     const user = userEvent.setup();
     const api = settingsApi();
@@ -100,10 +181,10 @@ describe("SettingsPage", () => {
       backupStatus: vi.fn().mockResolvedValue({
         ok: true,
         data: {
-          state: "MISSING",
+          state: "NEVER_RUN",
           last_valid_backup_date: null,
           last_verification_failure_date: null,
-          verification_result: "NOT_RUN",
+          verification_result: "NOT_AVAILABLE",
           domestic_date: "2026-07-23",
           retention_count: 0,
         },

@@ -318,7 +318,6 @@ test("reverses, reconciles and reports exact cross-period effects on the real le
   await page.getByLabel("Cuenta").selectOption({ label: scenario.accountName });
   await page.getByLabel("Fecha de corte").fill("2025-02-28");
   await page.getByLabel("Saldo real").fill("1.000,00");
-  await page.getByRole("button", { name: "Revisar movimientos" }).click();
   const pending = page.getByRole("list", { name: "Movimientos pendientes" });
   await expect(pending.getByRole("checkbox")).toHaveCount(3);
   await expect(pending).toContainText("2025-01-01");
@@ -344,7 +343,34 @@ test("reverses, reconciles and reports exact cross-period effects on the real le
 
   await page.getByRole("link", { name: "Ajustes" }).click();
   const audit = reportSection(page, "Actividad de seguridad");
+  const backup = reportSection(page, "Copias de seguridad");
   await expect(audit).toContainText("Se contabilizó un movimiento.");
   await expect(audit).toContainText("Resultado: Correcto");
   await expect(page.getByRole("button", { name: /restaur/i })).toHaveCount(0);
+
+  for (const [width, expectedColumns] of [
+    [375, 1],
+    [768, 2],
+    [1024, 4],
+    [1440, 4],
+  ] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    const milestones = backup.locator(".backup-milestones");
+    await expect(milestones).toHaveCSS("display", "grid");
+    expect(
+      await milestones.evaluate(
+        (element) =>
+          getComputedStyle(element)
+            .gridTemplateColumns.split(" ")
+            .filter(Boolean).length,
+      ),
+    ).toBe(expectedColumns);
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  }
 });
