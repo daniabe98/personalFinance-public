@@ -1,11 +1,11 @@
 {
-  "branch": null,
+  "branch": "codex/spec-003-front-visual-workflow-redesign",
   "created": "2026-08-15T12:31:54.092611+00:00",
   "extra": {},
-  "pr": null,
-  "shipped": null,
+  "pr": "6",
+  "shipped": "2026-08-15T16:58:22.617401+00:00",
   "slug": "front-visual-workflow-redesign",
   "spec_id": "spec-003",
-  "state": "in_progress",
+  "state": "shipped",
   "title": "Redise\u00f1o visual y rigor de flujos del frontend"
 }
